@@ -12,6 +12,7 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
-    "@openzeppelin/merkle-tree": "^1.0.8"
+    "@openzeppelin/merkle-tree": "^1.0.8",
+    "viem": "^2.47.12"
   }
 }
