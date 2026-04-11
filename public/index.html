@@ -24,8 +24,10 @@
     </div>
 
     <section id="attestations-attest" class="sections">
-        <div><textarea id="articleInput" class="textEntry"></textarea></div>
-        <div><input type="text"></input></div>
+        <label class="inputLabel" for="articleInput">Article Text</label>
+        <div><textarea id="articleInput" class="input textEntry"></textarea></div>
+        <label class="inputLabel" for="cidInput">CID</label>
+        <div><input type="text" class="input cidInput" id="cidInput"></input></div>
     </section>
 
     <section id="attestations-verify" class="sections">
@@ -51,6 +53,7 @@
 
 
     <link rel="stylesheet" href="main.css">
+    <script src="tabs.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

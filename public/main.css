@@ -56,3 +56,15 @@
     width: 60%;
     min-height: 128px;
 }
+
+.cidInput {
+    width: 40%;
+}
+
+.input {
+    border-radius: 10px;
+}
+
+.inputLabel {
+    margin-left: 6px;
+}
