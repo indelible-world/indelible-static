@@ -56,3 +56,27 @@ articleInput.addEventListener('input', async function(event) {
 
 });
 
+const merkleSplit = 46;
+
+function buildTree(text) {
+    const chunks = [];
+    for (let i = 0; i < text.length; i += merkleSplit) {
+        chunks.push(text.slice(i, i + merkleSplit))
+    }
+
+    const values = chunks.map((chunk, i) => [i.toString(), chunk])
+    
+    const tree = StandardMerkleTree.of(values, ['string', 'string']);
+    console.log('Root:', tree.root);
+    console.log('Tree JSON:', JSON.stringify(tree));
+
+    return tree;
+}
+
+const commitAttestationButton = document.getElementById('commitAttestation');
+
+
+
+commitAttestationButton.addEventListener('click', function(event) {
+    const tree = buildTree(articleInput.value);
+});
