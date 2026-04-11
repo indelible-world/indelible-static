@@ -24,10 +24,17 @@
     </div>
 
     <section id="attestations-attest" class="sections">
-        <label class="inputLabel" for="articleInput">Article Text</label>
-        <div><textarea id="articleInput" class="input textEntry"></textarea></div>
-        <label class="inputLabel" for="cidInput">CID</label>
-        <div><input type="text" class="input cidInput" id="cidInput"></input></div>
+        <form>
+            <label class="inputLabel" for="articleInput">Article Text</label>
+            <div><textarea id="articleInput" class="input textEntry"></textarea></div>
+            <label class="inputLabel" for="cidInput" >CID</label>
+            <div><input type="text" class="input cid" id="cid" readonly="true"></input></div>
+            <label class="inputLabel" for="parentIpfsHashInput">Parent IPFS CID</label>
+            <div><input type="text" class="input cid" id="parentIpfsHashInput"></input></div>
+        
+            <button type="submit" class="inputLabel" id="continueAttestation">Continue</button>
+        
+        </form>
     </section>
 
     <section id="attestations-verify" class="sections">

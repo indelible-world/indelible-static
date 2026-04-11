@@ -37,7 +37,7 @@ function base32Encode(bytes) {
 }
 
 const articleInput = document.getElementById('articleInput');
-const cidInput = document.getElementById('cidInput');
+const cidField = document.getElementById('cid');
 
 articleInput.addEventListener('input', async function(event) {
     console.log('Current text:', event.target.value);
@@ -45,6 +45,8 @@ articleInput.addEventListener('input', async function(event) {
 
     const cid = await createRawCIDv1(hashData);
     console.log(cid);
-    cidInput.value = cid;
+    cidField.value = cid;
 
 });
+
+const continueAttestation = document.getElementById('continueAttestation');
