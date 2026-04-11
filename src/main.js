@@ -1,4 +1,5 @@
 import './main.css'
+import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 
 async function createRawCIDv1(data) {
   // 1. Hash the data with SHA-256 (Web Crypto API)
