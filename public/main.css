@@ -1,6 +1,10 @@
 .topnav {
   background-color: #4c4c4c;
   overflow: hidden;
+  width: fit-content;
+  margin-top: 15px;
+  margin-left: 15px;
+  border-radius: 10px;
 }
 
 /* Style the links inside the navigation bar */
@@ -28,6 +32,7 @@
 /* Sub-navbars hidden by default */
 .subnav {
     display: none;
+    margin-top:3px;
 }
 
 .subnav.active {
@@ -37,8 +42,17 @@
 /* Define section visibility */
 .sections {
     display: none;
+    
 }
 
 .sections:target {
     display: block;
+    margin-left: 20px;
+    margin-top: 10px;
+}
+
+.textEntry {
+    field-sizing: content;
+    width: 60%;
+    min-height: 128px;
 }
