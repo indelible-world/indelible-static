@@ -25,10 +25,20 @@
   color: white;
 }
 
-.sections:target { 
+/* Define section visibility */
+.sections {
+    display: none;
+}
+
+.sections:target,
+.sections:has(.subsections:target) { 
     display: block; 
 }
 
-.sections {
+.subsections:target {
+    display: block;
+}
+
+.subsections {
     display: none;
 }

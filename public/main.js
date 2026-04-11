@@ -6,5 +6,5 @@ document.querySelectorAll('.topnav a').forEach(link => {
 });
 
 if (!location.hash) {
-    location.hash = '#attestations';
+    location.hash = '#attestations-attest';
 }
