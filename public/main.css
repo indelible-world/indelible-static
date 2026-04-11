@@ -25,20 +25,20 @@
   color: white;
 }
 
+/* Sub-navbars hidden by default */
+.subnav {
+    display: none;
+}
+
+.subnav.active {
+    display: block;
+}
+
 /* Define section visibility */
 .sections {
     display: none;
 }
 
-.sections:target,
-.sections:has(.subsections:target) { 
-    display: block; 
-}
-
-.subsections:target {
+.sections:target {
     display: block;
-}
-
-.subsections {
-    display: none;
 }

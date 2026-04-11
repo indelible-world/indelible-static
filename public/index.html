@@ -6,33 +6,45 @@
     <title>Indelible App</title>
 </head>
 <body>
-    <div class="topnav">
-        <a class="active" href="#attestations">Attestations</a>
-        <a href="#delegations">Delegations</a>
-        <a href="#ens">ENS</a>
+    <div class="topnav" id="mainnav">
+        <a class="active" href="#" data-group="attestations">Attestations</a>
+        <a href="#" data-group="delegations">Delegations</a>
+        <a href="#" data-group="ens">ENS</a>
     </div>
 
-    <section id="attestations" class="sections">
-    <div class="topnav">
+    <div class="topnav subnav" id="subnav-attestations">
         <a class="active" href="#attestations-attest">Attest</a>
         <a href="#attestations-verify">Verify</a>
+        <a href="#attestations-revoke">Revoke</a>
     </div>
 
-    <section id="attestations-attest" class="subsections">
+    <div class="topnav subnav" id="subnav-delegations">
+        <a href="#delegations-delegate">Delegate</a>
+        <a href="#delegations-revoke">Revoke</a>
+    </div>
+
+    <section id="attestations-attest" class="sections">
         <p>attest</p>
     </section>
 
-    <section id="attestations-verify" class="subsections">
+    <section id="attestations-verify" class="sections">
         <p>verify</p>
     </section>
+
+    <section id="attestations-revoke" class="sections">
+        <p>revoke attestation</p>
     </section>
 
-    <section id="delegations" class="sections">
-<p> test2</p>
+    <section id="delegations-delegate" class="sections">
+        <p>delegate</p>
+    </section>
+
+    <section id="delegations-revoke" class="sections">
+        <p>revoke delegation</p>
     </section>
 
     <section id="ens" class="sections">
-<p> test3</p>
+        <p>test3</p>
     </section>
 
 
