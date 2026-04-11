@@ -41,6 +41,10 @@ const cidField = document.getElementById('cid');
 
 articleInput.addEventListener('input', async function(event) {
     console.log('Current text:', event.target.value);
+    if (event.target.value == "") {
+        cidField.value = "";
+        return
+    }
     const hashData = new TextEncoder().encode(event.target.value);
 
     const cid = await createRawCIDv1(hashData);
