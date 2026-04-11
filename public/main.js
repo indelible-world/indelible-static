@@ -1,51 +1,50 @@
-// Main nav: show/hide sub-navbars
-document.querySelectorAll('#mainnav a').forEach(link => {
-  link.addEventListener('click', function (e) {
-    e.preventDefault();
-    const group = this.dataset.group;
+async function createRawCIDv1(data) {
+  // 1. Hash the data with SHA-256 (Web Crypto API)
+  const digest = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', data)
+  );
 
-    // Update active state on main nav
-    document.querySelector('#mainnav a.active')?.classList.remove('active');
-    this.classList.add('active');
+  // 2. Build the CID bytes: version(1) + codec(0x55) + multihash
+  //    multihash = hash_func(0x12) + digest_size(0x20) + digest(32 bytes)
+  const cid = new Uint8Array(2 + 2 + digest.length);
+  cid[0] = 0x01; // CIDv1
+  cid[1] = 0x55; // raw multicodec
+  cid[2] = 0x12; // sha2-256
+  cid[3] = 0x20; // 32 bytes
+  cid.set(digest, 4);
 
-    // Show the matching subnav, hide others
-    document.querySelectorAll('.subnav').forEach(nav => nav.classList.remove('active'));
-    const subnav = document.getElementById('subnav-' + group);
-    if (subnav) {
-      subnav.classList.add('active');
-      // Click the first sub-link by default
-      const firstLink = subnav.querySelector('a');
-      if (firstLink) {
-        firstLink.click();
-      }
-    } else {
-      // No subnav (e.g. ENS) — navigate directly
-      location.hash = '#' + group;
-    }
-  });
-});
-
-// Sub nav: update active state and navigate
-document.querySelectorAll('.subnav a').forEach(link => {
-  link.addEventListener('click', function () {
-    // Update active within this subnav
-    this.closest('.subnav').querySelectorAll('a').forEach(a => a.classList.remove('active'));
-    this.classList.add('active');
-  });
-});
-
-// Initialize: show attestations on load
-if (!location.hash) {
-  document.querySelector('#mainnav a[data-group="attestations"]').click();
-} else {
-  // Figure out which group the hash belongs to and activate it
-  const hash = location.hash.slice(1);
-  const group = hash.split('-')[0];
-  const mainLink = document.querySelector('#mainnav a[data-group="' + group + '"]');
-  if (mainLink) {
-    mainLink.click();
-    // Then activate the specific sub-link
-    const subLink = document.querySelector('.subnav a[href="#' + hash + '"]');
-    if (subLink) subLink.click();
-  }
+  // 3. Encode as base32lower with 'b' multibase prefix
+  return 'b' + base32Encode(cid);
 }
+
+// RFC 4648 base32 (lowercase, no padding)
+function base32Encode(bytes) {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
+  let bits = 0, value = 0, output = '';
+
+  for (const byte of bytes) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      output += alphabet[(value >>> bits) & 0x1f];
+    }
+  }
+  if (bits > 0) {
+    output += alphabet[(value << (5 - bits)) & 0x1f];
+  }
+  return output;
+}
+
+const articleInput = document.getElementById('articleInput');
+const cidInput = document.getElementById('cidInput');
+
+articleInput.addEventListener('input', async function(event) {
+    console.log('Current text:', event.target.value);
+    const hashData = new TextEncoder().encode(event.target.value);
+
+    const cid = await createRawCIDv1(hashData);
+    console.log(cid);
+    cidInput.value = cid;
+
+});
