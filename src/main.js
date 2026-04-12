@@ -528,3 +528,74 @@ revokeDelegationButton.addEventListener('click', async function(event) {
         revokeDelegationButton.disabled = false;
     }
 });
+
+const proveQuoteButton = document.getElementById('proveQuoteButton');
+const proveArticleInput = document.getElementById('proveArticleInput');
+const proveQuoteInput = document.getElementById('proveQuoteInput');
+const proveAuthorityInput = document.getElementById('proveAuthorityInput');
+const proveQuoteStatus = document.getElementById('proveQuoteStatus');
+
+proveQuoteButton.addEventListener('click', async function(event) {
+    event.preventDefault();
+
+    const articleText = proveArticleInput.value;
+    const quote = proveQuoteInput.value;
+    const authority = proveAuthorityInput.value.trim();
+
+    if (!articleText) {
+        alert('Please enter the article text.');
+        return;
+    }
+    if (!quote) {
+        alert('Please enter the quote to prove.');
+        return;
+    }
+    if (!authority) {
+        alert('Please enter the authority address.');
+        return;
+    }
+
+    // Find the quote's position in the article text
+    const quoteStart = articleText.indexOf(quote);
+    if (quoteStart === -1) {
+        alert('Quote not found in the article text.');
+        return;
+    }
+    const quoteEnd = quoteStart + quote.length;
+
+    // Determine which chunks (by index) the quote spans
+    const firstChunk = Math.floor(quoteStart / merkleSplit);
+    const lastChunk = Math.floor((quoteEnd - 1) / merkleSplit);
+
+    const tree = buildTree(articleText);
+
+    const matchingProofs = [];
+    for (const [i, v] of tree.entries()) {
+        const chunkIndex = parseInt(v[0], 10);
+        if (chunkIndex >= firstChunk && chunkIndex <= lastChunk) {
+            matchingProofs.push({
+                value: v,
+                proof: tree.getProof(i)
+            });
+        }
+    }
+
+    // Compute CID of the article
+    const hashData = new TextEncoder().encode(articleText);
+    const cid = await createRawCIDv1(hashData);
+
+    const proofJson = {
+        ipfsCid: cid,
+        authority: authority,
+        proof: matchingProofs
+    };
+
+    // Download as JSON
+    const blob = new Blob([JSON.stringify(proofJson, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'quote-proof.json';
+    a.click();
+    URL.revokeObjectURL(url);
+});

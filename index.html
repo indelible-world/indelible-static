@@ -34,10 +34,8 @@
     <header class="navbar">
         <nav class="topnav subnav" id="subnav-attestations">
             <a class="active" href="#attestations-attest">Attest</a>
-            <a href="#attestations-verify">Verify</a>
             <a href="#attestations-revoke">Revoke</a>
             <a href="#attestations-prove-quote">Prove Quote</a>
-            <a href="#attestations-verify-quote">Verify Quote</a>
         </nav>
     </header>
 
@@ -67,10 +65,6 @@
         </form>
     </section>
 
-    <section id="attestations-verify" class="sections">
-        <p>verify</p>
-    </section>
-
     <section id="attestations-revoke" class="sections">
         <form>
             <label class="inputLabel" for="revokeAttestationIdInput">Attestation ID</label>
@@ -83,11 +77,18 @@
     </section>
 
     <section id="attestations-prove-quote" class="sections">
-        <p>prove quote</p>
-    </section>
-    
-    <section id="attestations-verify-quote" class="sections">
-        <p>verify quote</p>
+        <form>
+            <label class="inputLabel" for="proveArticleInput">Article Text</label>
+            <div><textarea id="proveArticleInput" class="input textEntry"></textarea></div>
+            <label class="inputLabel" for="proveQuoteInput">Quote</label>
+            <div><textarea id="proveQuoteInput" class="input textEntry"></textarea></div>
+            <label class="inputLabel" for="proveAuthorityInput">Authority Address</label>
+            <div><input type="text" class="input cid" id="proveAuthorityInput" placeholder="0x..."></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="proveQuoteButton">Download Proof</button>
+                <span id="proveQuoteStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
     </section>
 
     <section id="delegations-delegate" class="sections">
