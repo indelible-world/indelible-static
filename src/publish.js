@@ -1,4 +1,3 @@
-import './main.css'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';

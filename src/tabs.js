@@ -1,3 +1,5 @@
+import './main.css'
+
 // Main nav: show/hide sub-navbars
 document.querySelectorAll('#mainnav a').forEach(link => {
     link.addEventListener('click', function (e) {
@@ -34,9 +36,9 @@ document.querySelectorAll('.subnav a').forEach(link => {
     });
 });
 
-// Initialize: show attestations on load
+// Initialize: show first tab on load
 if (!location.hash) {
-    document.querySelector('#mainnav a[data-group="attestations"]').click();
+    document.querySelector('#mainnav a')?.click();
 } else {
     // Figure out which group the hash belongs to and activate it
     const hash = location.hash.slice(1);
