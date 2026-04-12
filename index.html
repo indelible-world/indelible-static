@@ -72,7 +72,14 @@
     </section>
 
     <section id="attestations-revoke" class="sections">
-        <p>revoke attestation</p>
+        <form>
+            <label class="inputLabel" for="revokeAttestationIdInput">Attestation ID</label>
+            <div><input type="text" class="input cid" id="revokeAttestationIdInput" placeholder="e.g. 1"></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="revokeAttestationButton">Revoke Attestation</button>
+                <span id="revokeAttestationStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
     </section>
 
     <section id="attestations-prove-quote" class="sections">
@@ -84,11 +91,26 @@
     </section>
 
     <section id="delegations-delegate" class="sections">
-        <p>delegate</p>
+        <form>
+            <label class="inputLabel" for="delegateAddressInput">Delegate Address</label>
+            <div><input type="text" class="input cid" id="delegateAddressInput" placeholder="0x..."></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="delegateButton">Delegate</button>
+                <span id="delegateStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
     </section>
 
     <section id="delegations-revoke" class="sections">
-        <p>revoke delegation</p>
+        <form>
+            <label class="inputLabel">Current Delegate</label>
+            <div><input type="text" class="input cid" id="currentDelegateDisplay" readonly placeholder="Connect wallet to view"></div>
+            <button type="button" class="inputLabel" id="loadDelegateButton">Load Delegate</button>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="revokeDelegationButton">Revoke Delegation</button>
+                <span id="revokeDelegationStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
     </section>
 
     <section id="ens" class="sections">

@@ -332,3 +332,199 @@ revealButton.addEventListener('click', async function(event) {
     pendingCommit = null;
     revealButton.hidden = true;
 });
+
+// --- Revoke Attestation ---
+const revokeAttestationButton = document.getElementById('revokeAttestationButton');
+const revokeAttestationIdInput = document.getElementById('revokeAttestationIdInput');
+const revokeAttestationStatus = document.getElementById('revokeAttestationStatus');
+
+revokeAttestationButton.addEventListener('click', async function(event) {
+    event.preventDefault();
+
+    const attestationId = revokeAttestationIdInput.value.trim();
+    if (!attestationId) {
+        alert('Please enter an attestation ID.');
+        return;
+    }
+
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
+
+    revokeAttestationStatus.hidden = false;
+    revokeAttestationStatus.textContent = 'Processing...';
+    revokeAttestationButton.disabled = true;
+
+    try {
+        const publicClient = createPublicClient({
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+
+        const hash = await walletClient.writeContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'revokeAttestation',
+            args: [BigInt(attestationId)]
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== 'success') {
+            throw new Error('Revoke transaction failed');
+        }
+
+        revokeAttestationStatus.textContent = 'Attestation revoked.';
+    } catch (err) {
+        revokeAttestationStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
+    } finally {
+        revokeAttestationButton.disabled = false;
+    }
+});
+
+// --- Delegate ---
+const delegateButton = document.getElementById('delegateButton');
+const delegateAddressInput = document.getElementById('delegateAddressInput');
+const delegateStatus = document.getElementById('delegateStatus');
+
+delegateButton.addEventListener('click', async function(event) {
+    event.preventDefault();
+
+    const delegateAddress = delegateAddressInput.value.trim();
+    if (!delegateAddress) {
+        alert('Please enter a delegate address.');
+        return;
+    }
+
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
+
+    delegateStatus.hidden = false;
+    delegateStatus.textContent = 'Processing...';
+    delegateButton.disabled = true;
+
+    try {
+        const publicClient = createPublicClient({
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+
+        const hash = await walletClient.writeContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'delegate',
+            args: [delegateAddress]
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== 'success') {
+            throw new Error('Delegate transaction failed');
+        }
+
+        delegateStatus.textContent = 'Delegation successful.';
+    } catch (err) {
+        delegateStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
+    } finally {
+        delegateButton.disabled = false;
+    }
+});
+
+// --- Revoke Delegation ---
+const revokeDelegationButton = document.getElementById('revokeDelegationButton');
+const revokeDelegationStatus = document.getElementById('revokeDelegationStatus');
+const currentDelegateDisplay = document.getElementById('currentDelegateDisplay');
+const loadDelegateButton = document.getElementById('loadDelegateButton');
+
+async function loadCurrentDelegate() {
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+    }
+
+    const publicClient = createPublicClient({
+        chain: getSelectedChain(),
+        transport: custom(selectedWallet.provider),
+    });
+
+    const delegation = await publicClient.readContract({
+        address: taanqAddress,
+        abi: taanqAbi,
+        functionName: 'delegations',
+        args: [accounts[0]],
+    });
+
+    const [delegateAddress, timestamp] = delegation;
+    if (timestamp === 0n || delegateAddress === '0x0000000000000000000000000000000000000000') {
+        currentDelegateDisplay.value = 'No active delegation';
+    } else {
+        currentDelegateDisplay.value = delegateAddress;
+    }
+}
+
+loadDelegateButton.addEventListener('click', async function() {
+    try {
+        await loadCurrentDelegate();
+    } catch (err) {
+        currentDelegateDisplay.value = 'Error: ' + (err.shortMessage || err.message);
+    }
+});
+
+revokeDelegationButton.addEventListener('click', async function(event) {
+    event.preventDefault();
+
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
+
+    revokeDelegationStatus.hidden = false;
+    revokeDelegationStatus.textContent = 'Processing...';
+    revokeDelegationButton.disabled = true;
+
+    try {
+        const publicClient = createPublicClient({
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+
+        const hash = await walletClient.writeContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'revokeDelegation',
+            args: []
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== 'success') {
+            throw new Error('Revoke delegation transaction failed');
+        }
+
+        revokeDelegationStatus.textContent = 'Delegation revoked.';
+        currentDelegateDisplay.value = 'No active delegation';
+    } catch (err) {
+        revokeDelegationStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
+    } finally {
+        revokeDelegationButton.disabled = false;
+    }
+});
