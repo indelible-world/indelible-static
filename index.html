@@ -6,19 +6,40 @@
     <title>Indelible App</title>
 </head>
 <body>
-    <div class="topnav" id="mainnav">
-        <a class="active" href="#" data-group="attestations">Attestations</a>
-        <a href="#" data-group="delegations">Delegations</a>
-        <a href="#" data-group="ens">ENS</a>
-    </div>
-
-    <div class="topnav subnav" id="subnav-attestations">
-        <a class="active" href="#attestations-attest">Attest</a>
-        <a href="#attestations-verify">Verify</a>
-        <a href="#attestations-revoke">Revoke</a>
-        <a href="#attestations-prove-quote">Prove Quote</a>
-        <a href="#attestations-verify-quote">Verify Quote</a>
-    </div>
+    <header class="navbar">
+        <nav class="topnav" id="mainnav">
+            <a class="active" href="#" data-group="attestations">Attestations</a>
+            <a href="#" data-group="delegations">Delegations</a>
+            <a href="#" data-group="ens">ENS</a>
+            
+        </nav>
+        <div>
+            
+        </div>
+        <div class="settings-wrapper">
+            <button class="settings-button" id="settingsToggle">Settings</button>
+            <div class="settings-dropdown" id="settingsDropdown">
+                <label class="settings-label" for="chainSelect">Chain</label>
+                <select id="chainSelect" class="settings-input">
+                    <option value="sepolia" selected>Sepolia</option>
+                    <option value="ethereum">Ethereum</option>
+                    <option value="arbitrum">Arbitrum</option>
+                    <option value="base">Base</option>
+                </select>
+                <label class="settings-label" for="rpcUrlInput">RPC URL</label>
+                <input type="text" id="rpcUrlInput" class="settings-input" placeholder="https://...">
+            </div>
+        </div>
+    </header>
+    <header class="navbar">
+        <nav class="topnav subnav" id="subnav-attestations">
+            <a class="active" href="#attestations-attest">Attest</a>
+            <a href="#attestations-verify">Verify</a>
+            <a href="#attestations-revoke">Revoke</a>
+            <a href="#attestations-prove-quote">Prove Quote</a>
+            <a href="#attestations-verify-quote">Verify Quote</a>
+        </nav>
+    </header>
 
     <div class="topnav subnav" id="subnav-delegations">
         <a href="#delegations-delegate">Delegate</a>
@@ -36,7 +57,12 @@
             <label class="inputLabel" for="authorityInput">Authority Address</label>
             <div><input type="text" class="input cid" id="authorityInput" placeholder="Optional"></input></div>
         
-            <button type="submit" class="inputLabel" id="commitAttestation">Continue</button>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="commitAttestation">Continue</button>
+                <p>You will have to wait 60 seconds to prevent someone from frontrunning your attestation.</p>
+                <span id="commitTimer" class="commit-timer" hidden></span>
+            </div>
+            <button type="button" class="inputLabel" id="revealAttestation" hidden>Reveal</button>
         
         </form>
     </section>

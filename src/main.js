@@ -1,5 +1,20 @@
 import './main.css'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
+import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad} from 'viem';
+import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
+
+const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
+const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
+
+import taanqAbi from './assets/contractAbi/taanqAbi.json'
+import ensAbi from './assets/contractAbi/ensAbi.json'
+
+async function hashContent(data) {
+    const digest = new Uint8Array(
+        await crypto.subtle.digest('SHA-256', data)
+    );
+    return toHex(digest);
+}
 
 async function createRawCIDv1(data) {
     // 1. Hash the data with SHA-256 (Web Crypto API)
@@ -41,6 +56,8 @@ function base32Encode(bytes) {
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
+const parentIpfsHashField = document.getElementById('parentIpfsHashInput');
+const authorityField = document.getElementById('authorityInput');
 
 articleInput.addEventListener('input', async function(event) {
     console.log('Current text:', event.target.value);
@@ -75,8 +92,243 @@ function buildTree(text) {
 
 const commitAttestationButton = document.getElementById('commitAttestation');
 
+const wallets = [];
+let selectedWallet = null;
+let walletClient = null;
+let accounts = [];
 
+window.addEventListener('eip6963:announceProvider', (event) => {
+    wallets.push(event.detail); // { info: { name, icon, uuid }, provider }
+});
 
-commitAttestationButton.addEventListener('click', function(event) {
+window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+const chainSelect = document.getElementById('chainSelect');
+const rpcUrlInput = document.getElementById('rpcUrlInput');
+const settingsToggle = document.getElementById('settingsToggle');
+const settingsDropdown = document.getElementById('settingsDropdown');
+
+const chains = {
+    ethereum: mainnet,
+    arbitrum: arbitrum,
+    base: base,
+    sepolia: sepolia
+};
+
+function getSelectedChain() {
+    return chains[chainSelect.value] || sepolia;
+}
+
+settingsToggle.addEventListener('click', () => {
+    settingsDropdown.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+    if (!settingsDropdown.contains(e.target) && e.target !== settingsToggle) {
+        settingsDropdown.classList.remove('open');
+    }
+});
+
+async function ensureCorrectChain() {
+    const selectedChain = getSelectedChain();
+    const currentChainId = await selectedWallet.provider.request({ method: 'eth_chainId' });
+
+    if (parseInt(currentChainId, 16) !== selectedChain.id) {
+        await selectedWallet.provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x' + selectedChain.id.toString(16) }],
+        });
+    }
+}
+
+async function connectWallet(walletIndex = 0) {
+    if (!wallets.length) throw new Error('No wallets discovered');
+
+    selectedWallet = wallets[walletIndex];
+    accounts = await selectedWallet.provider.request({ method: 'eth_requestAccounts' });
+
+    await ensureCorrectChain();
+
+    walletClient = createWalletClient({
+        account: accounts[0],
+        chain: getSelectedChain(),
+        transport: custom(selectedWallet.provider),
+    });
+
+    return { accounts, walletClient };
+}
+
+function generateSalt() {
+    const salt = crypto.getRandomValues(new Uint8Array(32));
+    return toHex(salt); // bytes32 hex string
+}
+
+function buildSaltedHash(ipfsHash, address, salt) {
+    const addressBytes32 = pad(address, { size: 32, dir: 'right' });
+    return keccak256(
+        encodePacked(
+            ['bytes32', 'bytes32', 'bytes32'],
+            [ipfsHash, addressBytes32, salt]
+        )
+    );
+}
+
+let pendingCommit = null;
+
+const commitTimer = document.getElementById('commitTimer');
+const revealButton = document.getElementById('revealAttestation');
+
+// Restore pending commit from localStorage if available
+const stored = localStorage.getItem('pendingCommit');
+if (stored) {
+    pendingCommit = JSON.parse(stored);
+    const revealAt = localStorage.getItem('revealAt');
+    if (revealAt) {
+        const remaining = Math.ceil((parseInt(revealAt) - Date.now()) / 1000);
+        if (remaining > 0) {
+            startCommitTimer(remaining);
+        } else {
+            revealButton.hidden = false;
+        }
+    } else {
+        revealButton.hidden = false;
+    }
+}
+
+function startCommitTimer(seconds) {
+    let remaining = seconds;
+    commitTimer.hidden = false;
+    commitTimer.textContent = `${remaining}s`;
+    commitAttestationButton.disabled = true;
+
+    const interval = setInterval(() => {
+        remaining--;
+        commitTimer.textContent = `${remaining}s`;
+        if (remaining <= 0) {
+            clearInterval(interval);
+            commitTimer.hidden = true;
+            commitAttestationButton.disabled = false;
+            revealButton.hidden = false;
+            localStorage.removeItem('revealAt');
+        }
+    }, 1000);
+}
+
+commitAttestationButton.addEventListener('click', async function(event) {
     const tree = buildTree(articleInput.value);
+
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
+
+    const hashData = new TextEncoder().encode(articleInput.value);
+    const ipfsHash = await hashContent(hashData);   // raw SHA-256 digest as bytes32 hex
+    const qvHash = tree.root;          // merkle root
+    const salt = generateSalt();
+    let authority = "";
+    if (authorityField.value != "") {
+        authority = authorityField.value;
+    } else {
+        authority = accounts[0];
+    }
+
+    const saltedHash = buildSaltedHash(ipfsHash, authority, salt);
+
+    const publicClient = createPublicClient({
+        chain: getSelectedChain(),
+        transport: custom(selectedWallet.provider),
+    });
+
+    // Check if this authority has already attested this CID
+    const existingIndex = await publicClient.readContract({
+        address: taanqAddress,
+        abi: taanqAbi,
+        functionName: 'cidAndAddressToAttestationIndices',
+        args: [ipfsHash, authority],
+    });
+
+    if (existingIndex > 0n) {
+        const proceed = confirm(
+            'Warning: This authority has already attested this CID. Do you want to proceed anyway?'
+        );
+        if (!proceed) return;
+    }
+
+    // If an authority address was provided, check delegation
+    if (authorityField.value !== "" && authority.toLowerCase() !== accounts[0].toLowerCase()) {
+        const delegation = await publicClient.readContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'delegations',
+            args: [authority],
+        });
+
+        const [delegateAddress, timestamp] = delegation;
+        if (delegateAddress.toLowerCase() !== accounts[0].toLowerCase() || timestamp === 0n) {
+            alert('Error: You are not delegated to this authority. The authority must delegate to your address first.');
+            return;
+        }
+    }
+
+    commitTimer.hidden = false;
+    commitTimer.textContent = 'Processing...';
+    commitAttestationButton.disabled = true;
+
+    const hash = await walletClient.writeContract({
+        address: taanqAddress,
+        abi: taanqAbi,
+        functionName: 'commit',
+        args: [saltedHash]
+    });
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== 'success') {
+        commitTimer.hidden = true;
+        commitAttestationButton.disabled = false;
+        throw new Error('Commit transaction failed');
+    }
+
+    let parentIpfsHash = "";
+    if (parentIpfsHashField.value == "") {
+        parentIpfsHash = '0x' + '00'.repeat(32);
+    } else {
+        parentIpfsHash = parentIpfsHashField.value;
+    }
+
+    pendingCommit = [ saltedHash, salt, ipfsHash, qvHash, parentIpfsHash, authority ];
+    localStorage.setItem('pendingCommit', JSON.stringify(pendingCommit));
+    localStorage.setItem('revealAt', (Date.now() + 60000).toString());
+
+    startCommitTimer(60);
+});
+
+revealButton.addEventListener('click', async function(event) {
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
+
+    const hash = await walletClient.writeContract({
+        address: taanqAddress,
+        abi: taanqAbi,
+        functionName: 'reveal',
+        args: pendingCommit
+    });
+
+    localStorage.removeItem('pendingCommit');
+    pendingCommit = null;
+    revealButton.hidden = true;
 });
