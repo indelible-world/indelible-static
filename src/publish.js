@@ -109,8 +109,6 @@ window.addEventListener('eip6963:announceProvider', (event) => {
 window.dispatchEvent(new Event('eip6963:requestProvider'));
 
 const chainSelect = document.getElementById('chainSelect');
-const settingsToggle = document.getElementById('settingsToggle');
-const settingsDropdown = document.getElementById('settingsDropdown');
 
 const chains = {
     ethereum: mainnet,
@@ -122,16 +120,6 @@ const chains = {
 function getSelectedChain() {
     return chains[chainSelect.value] || sepolia;
 }
-
-settingsToggle.addEventListener('click', () => {
-    settingsDropdown.classList.toggle('open');
-});
-
-document.addEventListener('click', (e) => {
-    if (!settingsDropdown.contains(e.target) && e.target !== settingsToggle) {
-        settingsDropdown.classList.remove('open');
-    }
-});
 
 async function ensureCorrectChain() {
     const selectedChain = getSelectedChain();

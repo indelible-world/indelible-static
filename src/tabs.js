@@ -51,3 +51,17 @@ if (!location.hash) {
         if (subLink) subLink.click();
     }
 }
+
+const settingsToggle = document.getElementById('settingsToggle');
+const settingsDropdown = document.getElementById('settingsDropdown');
+
+
+settingsToggle.addEventListener('click', () => {
+    settingsDropdown.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+    if (!settingsDropdown.contains(e.target) && e.target !== settingsToggle) {
+        settingsDropdown.classList.remove('open');
+    }
+});
