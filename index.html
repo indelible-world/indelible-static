@@ -26,8 +26,6 @@
                     <option value="arbitrum">Arbitrum</option>
                     <option value="base">Base</option>
                 </select>
-                <label class="settings-label" for="rpcUrlInput">RPC URL</label>
-                <input type="text" id="rpcUrlInput" class="settings-input" placeholder="https://...">
             </div>
         </div>
     </header>
@@ -115,7 +113,14 @@
     </section>
 
     <section id="ens" class="sections">
-        <p>test3</p>
+        <form>
+            <label class="inputLabel" for="ensNameInput">ENS Name</label>
+            <div><input type="text" class="input" id="ensNameInput" placeholder="nytimes.eth"></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="createBindingButton">Create Binding</button>
+                <span id="bindingStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
     </section>
 
 

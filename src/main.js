@@ -1,6 +1,6 @@
 import './main.css'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
-import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad} from 'viem';
+import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
@@ -8,6 +8,12 @@ const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
 
 import taanqAbi from './assets/contractAbi/taanqAbi.json'
 import ensAbi from './assets/contractAbi/ensAbi.json'
+
+const ensRegistryAddress = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
+const ensRegistryAbi = parseAbi(['function owner(bytes32 node) view returns (address)']);
+const ensResolverAbi = parseAbi([
+    'function setText(bytes32 node, string key, string value)'
+]);
 
 async function hashContent(data) {
     const digest = new Uint8Array(
@@ -104,7 +110,6 @@ window.addEventListener('eip6963:announceProvider', (event) => {
 window.dispatchEvent(new Event('eip6963:requestProvider'));
 
 const chainSelect = document.getElementById('chainSelect');
-const rpcUrlInput = document.getElementById('rpcUrlInput');
 const settingsToggle = document.getElementById('settingsToggle');
 const settingsDropdown = document.getElementById('settingsDropdown');
 
@@ -598,4 +603,144 @@ proveQuoteButton.addEventListener('click', async function(event) {
     a.download = 'quote-proof.json';
     a.click();
     URL.revokeObjectURL(url);
+});
+
+// --- ENS Binding ---
+const createBindingButton = document.getElementById('createBindingButton');
+const ensNameInput = document.getElementById('ensNameInput');
+const bindingStatus = document.getElementById('bindingStatus');
+
+function dnsEncodeName(name) {
+    const labels = name.replace(/\.$/, '').split('.');
+    const parts = [];
+    for (const label of labels) {
+        const encoded = new TextEncoder().encode(label);
+        if (encoded.length === 0 || encoded.length > 63) {
+            throw new Error(`Invalid label: "${label}"`);
+        }
+        parts.push(encoded.length);
+        parts.push(...encoded);
+    }
+    parts.push(0);
+    return toHex(new Uint8Array(parts));
+}
+
+createBindingButton.addEventListener('click', async function(event) {
+    event.preventDefault();
+
+    const ensName = ensNameInput.value.trim().toLowerCase();
+    if (!ensName || !ensName.includes('.')) {
+        alert('Please enter a valid ENS name (e.g. yourname.eth).');
+        return;
+    }
+
+    let dnsName;
+    try {
+        dnsName = dnsEncodeName(ensName);
+    } catch (err) {
+        alert('Invalid ENS name: ' + err.message);
+        return;
+    }
+
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
+
+    bindingStatus.hidden = false;
+    bindingStatus.textContent = 'Checking indelible-address record...';
+    createBindingButton.disabled = true;
+
+    try {
+        const publicClient = createPublicClient({
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+
+        const node = namehash(ensName);
+
+        // Look up the resolver for this ENS name
+        const resolverAddr = await publicClient.getEnsResolver({ name: ensName });
+        if (!resolverAddr) {
+            throw new Error('No resolver set for this ENS name. Please configure a resolver first.');
+        }
+
+        // Check if this name already has an active binding to the current user
+        const existingBinding = await publicClient.readContract({
+            address: ensAddress,
+            abi: ensAbi,
+            functionName: 'resolveIndelibleAddress',
+            args: [node]
+        });
+
+        if (existingBinding && existingBinding.toLowerCase() === accounts[0].toLowerCase()) {
+            throw new Error('This ENS name is already bound to your address.');
+        }
+
+        // Check if indelible-address text record is set
+        const indelibleAddr = await publicClient.getEnsText({ name: ensName, key: 'indelible-address' });
+
+        if (!indelibleAddr) {
+            // Verify the user owns this ENS name before writing records
+            const owner = await publicClient.readContract({
+                address: ensRegistryAddress,
+                abi: ensRegistryAbi,
+                functionName: 'owner',
+                args: [node]
+            });
+
+            if (!owner || owner.toLowerCase() !== accounts[0].toLowerCase()) {
+                throw new Error('You do not own this ENS name. Only the owner can set the indelible-address record.');
+            }
+
+            const shouldSet = confirm(
+                'The "indelible-address" text record is not set on your ENS resolver. ' +
+                'This is required for the binding to work.\n\n' +
+                'Would you like to set it to your current wallet address?\n' +
+                accounts[0]
+            );
+            if (!shouldSet) {
+                bindingStatus.textContent = 'Cancelled — indelible-address record required.';
+                return;
+            }
+
+            bindingStatus.textContent = 'Setting indelible-address record...';
+            const setTextHash = await walletClient.writeContract({
+                address: resolverAddr,
+                abi: ensResolverAbi,
+                functionName: 'setText',
+                args: [node, 'indelible-address', accounts[0]]
+            });
+
+            const setTextReceipt = await publicClient.waitForTransactionReceipt({ hash: setTextHash });
+            if (setTextReceipt.status !== 'success') {
+                throw new Error('Failed to set indelible-address text record');
+            }
+        }
+
+        bindingStatus.textContent = 'Registering ENS binding...';
+        const hash = await walletClient.writeContract({
+            address: ensAddress,
+            abi: ensAbi,
+            functionName: 'registerEnsBinding',
+            args: [dnsName]
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== 'success') {
+            throw new Error('ENS binding transaction failed');
+        }
+
+        bindingStatus.textContent = 'ENS binding registered.';
+    } catch (err) {
+        bindingStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
+    } finally {
+        createBindingButton.disabled = false;
+    }
 });
