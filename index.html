@@ -6,6 +6,53 @@
     <title>Indelible Verify</title>
 </head>
 <body>
-    
+    <header class="navbar">
+        <nav class="topnav" id="mainnav">
+            <a class="active" href="#" data-group="verify-article">Verify Article</a>
+            <a href="#" data-group="verify-quote">Verify Quote</a>
+        </nav>
+
+        
+        <div class="settings-wrapper">
+            <button class="settings-button" id="settingsToggle">Settings</button>
+            <div class="settings-dropdown" id="settingsDropdown">
+                <label class="settings-label" for="chainSelect">Chain</label>
+                <select id="chainSelect" class="settings-input">
+                    <option value="sepolia" selected>Sepolia</option>
+                    <option value="ethereum">Ethereum</option>
+                    <option value="arbitrum">Arbitrum</option>
+                    <option value="base">Base</option>
+                </select>
+                <label class="settings-label" for="rpcInput">RPC URL</label>
+                <input id="rpcInput" class="settings-input"></input>
+            </div>
+        </div>
+    </header>
+
+    <section id="verify-article" class="sections">
+        <form>
+            <label class="inputLabel" for="revokeAttestationIdInput">Attestation ID</label>
+            <div><input type="text" class="input cid" id="revokeAttestationIdInput" placeholder="e.g. 1"></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="revokeAttestationButton">Revoke Attestation</button>
+                <span id="revokeAttestationStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
+    </section>
+
+    <section id="verify-quote" class="sections">
+        <form>
+            <label class="inputLabel" for="revokeAttestationIdInput">Attestation ID</label>
+            <div><input type="text" class="input cid" id="revokeAttestationIdInput" placeholder="e.g. 1"></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="revokeAttestationButton">Revoke Attestation</button>
+                <span id="revokeAttestationStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
+    </section>
+
+
+
+    <script type="module" src="/src/tabs.js"></script>
 </body>
 </html>
