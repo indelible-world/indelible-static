@@ -1,6 +1,7 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
+import { hashContent, createRawCIDv1, buildTree } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
@@ -14,50 +15,6 @@ const ensResolverAbi = parseAbi([
     'function setText(bytes32 node, string key, string value)'
 ]);
 
-async function hashContent(data) {
-    const digest = new Uint8Array(
-        await crypto.subtle.digest('SHA-256', data)
-    );
-    return toHex(digest);
-}
-
-async function createRawCIDv1(data) {
-    // 1. Hash the data with SHA-256 (Web Crypto API)
-    const digest = new Uint8Array(
-        await crypto.subtle.digest('SHA-256', data)
-    );
-
-    // 2. Build the CID bytes: version(1) + codec(0x55) + multihash
-    //    multihash = hash_func(0x12) + digest_size(0x20) + digest(32 bytes)
-    const cid = new Uint8Array(2 + 2 + digest.length);
-    cid[0] = 0x01; // CIDv1
-    cid[1] = 0x55; // raw multicodec
-    cid[2] = 0x12; // sha2-256
-    cid[3] = 0x20; // 32 bytes
-    cid.set(digest, 4);
-
-    // 3. Encode as base32lower with 'b' multibase prefix
-    return 'b' + base32Encode(cid);
-}
-
-    // RFC 4648 base32 (lowercase, no padding)
-function base32Encode(bytes) {
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
-    let bits = 0, value = 0, output = '';
-
-    for (const byte of bytes) {
-        value = (value << 8) | byte;
-        bits += 8;
-        while (bits >= 5) {
-        bits -= 5;
-        output += alphabet[(value >>> bits) & 0x1f];
-        }
-    }
-    if (bits > 0) {
-        output += alphabet[(value << (5 - bits)) & 0x1f];
-    }
-    return output;
-}
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
@@ -77,23 +34,6 @@ articleInput.addEventListener('input', async function(event) {
     cidField.value = cid;
 
 });
-
-const merkleSplit = 46;
-
-function buildTree(text) {
-    const chunks = [];
-    for (let i = 0; i < text.length; i += merkleSplit) {
-        chunks.push(text.slice(i, i + merkleSplit))
-    }
-
-    const values = chunks.map((chunk, i) => [i.toString(), chunk])
-    
-    const tree = StandardMerkleTree.of(values, ['string', 'string']);
-    console.log('Root:', tree.root);
-    console.log('Tree JSON:', JSON.stringify(tree));
-
-    return tree;
-}
 
 const commitAttestationButton = document.getElementById('commitAttestation');
 
