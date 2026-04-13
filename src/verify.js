@@ -2,6 +2,7 @@ import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { createPublicClient, http, toHex } from 'viem'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import taanqAbi from './assets/contractAbi/taanqAbi.json'
+import { hashContent, createRawCIDv1, buildTree, dnsEncodeName } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 
@@ -121,10 +122,19 @@ const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
 const authorityField = document.getElementById('authorityInput');
 
-function inputEditabilitySwitcher(event) {
+articleInput.addEventListener('input', async function (event) {
     if (event.target.value != "") {
-        
+        cidField.readOnly = true;
+        cidField.value = await createRawCIDv1(event.target.value);
+    } else {
+        cidField.value = "";
+        cidField.readOnly = false;
     }
-}
-articleInput.addEventListener('input', inputEditabilitySwitcher);
-cidField.addEventListener('input', inputEditabilitySwitcher);
+});
+cidField.addEventListener('input', async function (event) {
+    if (event.target.value != "") {
+        articleInput.readOnly = true;
+    } else {
+        articleInput.readOnly = false;
+    }
+});
