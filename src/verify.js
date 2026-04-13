@@ -2,7 +2,7 @@ import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { createPublicClient, http, toHex } from 'viem'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import taanqAbi from './assets/contractAbi/taanqAbi.json'
-import { hashContent, createRawCIDv1, buildTree, dnsEncodeName } from '/src/utils.js';
+import { hashContent, createRawCIDv1, buildTree, dnsEncodeName, decodeCidToIpfsHash } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 
@@ -48,30 +48,6 @@ rpcInput.addEventListener('input', () => {
 buildClient();
 
 // --- Verify Quote ---
-
-// Decode a base32lower CIDv1 to extract the raw SHA-256 digest as bytes32 hex
-function decodeCidToIpfsHash(cid) {
-    // Strip 'b' multibase prefix
-    const base32 = cid.startsWith('b') ? cid.slice(1) : cid;
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
-    let bits = 0, value = 0;
-    const bytes = [];
-    for (const char of base32) {
-        const idx = alphabet.indexOf(char);
-        if (idx === -1) throw new Error('Invalid base32 character: ' + char);
-        value = (value << 5) | idx;
-        bits += 5;
-        if (bits >= 8) {
-            bits -= 8;
-            bytes.push((value >>> bits) & 0xff);
-        }
-    }
-    const raw = new Uint8Array(bytes);
-    // CIDv1: version(1) + codec(0x55) + multihash(0x12, 0x20, 32 bytes digest)
-    // Skip first 4 bytes (version, codec, hash func, digest size)
-    const digest = raw.slice(4);
-    return toHex(digest);
-}
 
 const verifyQuoteForm = document.getElementById('verifyQuoteForm');
 const proofFileInput = document.getElementById('proofFileInput');
@@ -139,3 +115,4 @@ cidField.addEventListener('input', async function (event) {
         articleInput.readOnly = false;
     }
 });
+

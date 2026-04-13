@@ -85,3 +85,27 @@ export function dnsEncodeName(name) {
     parts.push(0);
     return toHex(new Uint8Array(parts));
 }
+
+// Decode a base32lower CIDv1 to extract the raw SHA-256 digest as bytes32 hex
+export function decodeCidToIpfsHash(cid) {
+    // Strip 'b' multibase prefix
+    const base32 = cid.startsWith('b') ? cid.slice(1) : cid;
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
+    let bits = 0, value = 0;
+    const bytes = [];
+    for (const char of base32) {
+        const idx = alphabet.indexOf(char);
+        if (idx === -1) throw new Error('Invalid base32 character: ' + char);
+        value = (value << 5) | idx;
+        bits += 5;
+        if (bits >= 8) {
+            bits -= 8;
+            bytes.push((value >>> bits) & 0xff);
+        }
+    }
+    const raw = new Uint8Array(bytes);
+    // CIDv1: version(1) + codec(0x55) + multihash(0x12, 0x20, 32 bytes digest)
+    // Skip first 4 bytes (version, codec, hash func, digest size)
+    const digest = raw.slice(4);
+    return toHex(digest);
+}
