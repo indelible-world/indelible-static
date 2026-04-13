@@ -116,3 +116,8 @@ cidField.addEventListener('input', async function (event) {
     }
 });
 
+const verifyButton = document.getElementById('verifyButton');
+verifyButton.addEventListener('click', async function(event) {
+    event.preventDefault()
+
+});
