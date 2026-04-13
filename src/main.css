@@ -147,3 +147,9 @@ button:hover {
   background-color: #ddd;
   color: black;
 }
+
+.changePage {
+  margin-right: auto;
+  margin-left: 15px;
+  margin-top: 10px;
+}
