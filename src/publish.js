@@ -146,6 +146,7 @@ function startCommitTimer(seconds) {
 }
 
 commitAttestationButton.addEventListener('click', async function(event) {
+    event.preventDefault()
     const tree = buildTree(articleInput.value);
 
     if (!walletClient) {
@@ -240,6 +241,7 @@ commitAttestationButton.addEventListener('click', async function(event) {
 });
 
 revealButton.addEventListener('click', async function(event) {
+    event.preventDefault()
     if (!walletClient) {
         await connectWallet();
     } else {
@@ -406,7 +408,8 @@ async function loadCurrentDelegate() {
     }
 }
 
-loadDelegateButton.addEventListener('click', async function() {
+loadDelegateButton.addEventListener('click', async function(event) {
+    event.preventDefault()
     try {
         await loadCurrentDelegate();
     } catch (err) {

@@ -123,6 +123,7 @@ const cidField = document.getElementById('cid');
 const authorityField = document.getElementById('authorityInput');
 
 articleInput.addEventListener('input', async function (event) {
+    
     if (event.target.value != "") {
         cidField.readOnly = true;
         cidField.value = await createRawCIDv1(event.target.value);
