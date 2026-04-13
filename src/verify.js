@@ -115,3 +115,16 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
         verifyQuoteButton.disabled = false;
     }
 });
+
+
+const articleInput = document.getElementById('articleInput');
+const cidField = document.getElementById('cid');
+const authorityField = document.getElementById('authorityInput');
+
+function inputEditabilitySwitcher(event) {
+    if (event.target.value != "") {
+        
+    }
+}
+articleInput.addEventListener('input', inputEditabilitySwitcher);
+cidField.addEventListener('input', inputEditabilitySwitcher);

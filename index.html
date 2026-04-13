@@ -32,12 +32,18 @@
 
     <section id="verify-article" class="sections">
         <form>
-            <label class="inputLabel" for="revokeAttestationIdInput">Attestation ID</label>
-            <div><input type="text" class="input cid" id="revokeAttestationIdInput" placeholder="e.g. 1"></div>
+            <label class="inputLabel" for="articleInput">Article Text</label>
+            <div><textarea id="articleInput" class="input textEntry"></textarea></div>
+            <label class="inputLabel" for="cidInput" >CID</label>
+            <div><input type="text" class="input cid" id="cid"></input></div>
+            <label class="inputLabel" for="authorityInput">Authority Address</label>
+            <div><input type="text" class="input cid" id="authorityInput" placeholder="Optional"></input></div>
+        
             <div class="commit-actions">
-                <button type="submit" class="inputLabel" id="revokeAttestationButton">Revoke Attestation</button>
-                <span id="revokeAttestationStatus" class="commit-timer" hidden></span>
+                <button type="submit" class="inputLabel" id="verifyButton">Verify</button>
+                <span id="commitTimer" class="commit-timer" hidden></span>
             </div>
+            <button type="button" class="inputLabel" id="revealAttestation" hidden>Reveal</button>
         </form>
     </section>
 
