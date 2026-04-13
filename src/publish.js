@@ -27,9 +27,8 @@ articleInput.addEventListener('input', async function(event) {
         cidField.value = "";
         return
     }
-    const hashData = new TextEncoder().encode(event.target.value);
 
-    const cid = await createRawCIDv1(hashData);
+    const cid = await createRawCIDv1(event.target.value);
     console.log(cid);
     cidField.value = cid;
 
@@ -160,8 +159,7 @@ commitAttestationButton.addEventListener('click', async function(event) {
         });
     }
 
-    const hashData = new TextEncoder().encode(articleInput.value);
-    const ipfsHash = await hexHashContent(hashData);   // raw SHA-256 digest as bytes32 hex
+    const ipfsHash = await hexHashContent(articleInput.value);   // raw SHA-256 digest as bytes32 hex
     const qvHash = tree.root;          // merkle root
     const salt = generateSalt();
     let authority = "";
@@ -513,8 +511,8 @@ proveQuoteButton.addEventListener('click', async function(event) {
     }
 
     // Compute CID of the article
-    const hashData = new TextEncoder().encode(articleText);
-    const cid = await createRawCIDv1(hashData);
+
+    const cid = await createRawCIDv1(articleText);
 
     const proofJson = {
         ipfsCid: cid,

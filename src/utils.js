@@ -1,4 +1,7 @@
 export async function hashContent(data) {
+    if (typeof data === 'string') {
+        data = new TextEncoder().encode(data);
+    }
     const digest = new Uint8Array(
         await crypto.subtle.digest('SHA-256', data)
     );
@@ -9,9 +12,13 @@ export async function hexHashContent(data) {
     return toHex(hashContent(data));
 }
 
+async function encodeText(text) {
+    return new TextEncoder().encode(text);
+}
+
 export async function createRawCIDv1(data) {
     // 1. Hash the data with SHA-256 (Web Crypto API)
-    const digest = hashContent(data);
+    const digest = await hashContent(data);
 
     // 2. Build the CID bytes: version(1) + codec(0x55) + multihash
     //    multihash = hash_func(0x12) + digest_size(0x20) + digest(32 bytes)
