@@ -42,14 +42,19 @@
     </section>
 
     <section id="verify-quote" class="sections">
-        <form>
-            <label class="inputLabel" for="revokeAttestationIdInput">Attestation ID</label>
-            <div><input type="text" class="input cid" id="revokeAttestationIdInput" placeholder="e.g. 1"></div>
+        <form id="verifyQuoteForm">
+            <label class="inputLabel" for="proofFileInput">Upload Merkle Proof JSON</label>
+            <div><input type="file" accept=".json" class="input" id="proofFileInput"></div>
             <div class="commit-actions">
-                <button type="submit" class="inputLabel" id="revokeAttestationButton">Revoke Attestation</button>
-                <span id="revokeAttestationStatus" class="commit-timer" hidden></span>
+                <button type="submit" class="inputLabel" id="verifyQuoteButton">Verify Quote</button>
+                <span id="verifyQuoteStatus" class="commit-timer" hidden></span>
             </div>
         </form>
+        <div id="verifyQuoteResult" hidden>
+            <h3 id="verifyQuoteHeading"></h3>
+            <p id="verifyQuoteText" class="quote-text"></p>
+            <ul id="verifyQuoteDetails"></ul>
+        </div>
     </section>
 
 

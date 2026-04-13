@@ -153,3 +153,21 @@ button:hover {
   margin-left: 15px;
   margin-top: 10px;
 }
+
+.quote-text {
+  background-color: #f9f9f9;
+  border-left: 4px solid #4c4c4c;
+  padding: 10px 15px;
+  margin: 10px 0;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+#verifyQuoteDetails {
+  list-style: none;
+  padding-left: 0;
+}
+
+#verifyQuoteDetails li {
+  padding: 4px 0;
+}
