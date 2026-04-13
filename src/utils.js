@@ -1,3 +1,5 @@
+import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
+
 export async function hashContent(data) {
     if (typeof data === 'string') {
         data = new TextEncoder().encode(data);
