@@ -2,14 +2,16 @@ export async function hashContent(data) {
     const digest = new Uint8Array(
         await crypto.subtle.digest('SHA-256', data)
     );
-    return toHex(digest);
+    return digest;
+}
+
+export async function hexHashContent(data) {
+    return toHex(hashContent(data));
 }
 
 export async function createRawCIDv1(data) {
     // 1. Hash the data with SHA-256 (Web Crypto API)
-    const digest = new Uint8Array(
-        await crypto.subtle.digest('SHA-256', data)
-    );
+    const digest = hashContent(data);
 
     // 2. Build the CID bytes: version(1) + codec(0x55) + multihash
     //    multihash = hash_func(0x12) + digest_size(0x20) + digest(32 bytes)
@@ -58,4 +60,19 @@ export function buildTree(text) {
     console.log('Tree JSON:', JSON.stringify(tree));
 
     return tree;
+}
+
+export function dnsEncodeName(name) {
+    const labels = name.replace(/\.$/, '').split('.');
+    const parts = [];
+    for (const label of labels) {
+        const encoded = new TextEncoder().encode(label);
+        if (encoded.length === 0 || encoded.length > 63) {
+            throw new Error(`Invalid label: "${label}"`);
+        }
+        parts.push(encoded.length);
+        parts.push(...encoded);
+    }
+    parts.push(0);
+    return toHex(new Uint8Array(parts));
 }

@@ -1,7 +1,7 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
-import { hashContent, createRawCIDv1, buildTree } from '/src/utils.js';
+import { hashContent, createRawCIDv1, buildTree, dnsEncodeName, hexHashContent } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
@@ -161,7 +161,7 @@ commitAttestationButton.addEventListener('click', async function(event) {
     }
 
     const hashData = new TextEncoder().encode(articleInput.value);
-    const ipfsHash = await hashContent(hashData);   // raw SHA-256 digest as bytes32 hex
+    const ipfsHash = await hexHashContent(hashData);   // raw SHA-256 digest as bytes32 hex
     const qvHash = tree.root;          // merkle root
     const salt = generateSalt();
     let authority = "";
@@ -536,21 +536,6 @@ proveQuoteButton.addEventListener('click', async function(event) {
 const createBindingButton = document.getElementById('createBindingButton');
 const ensNameInput = document.getElementById('ensNameInput');
 const bindingStatus = document.getElementById('bindingStatus');
-
-function dnsEncodeName(name) {
-    const labels = name.replace(/\.$/, '').split('.');
-    const parts = [];
-    for (const label of labels) {
-        const encoded = new TextEncoder().encode(label);
-        if (encoded.length === 0 || encoded.length > 63) {
-            throw new Error(`Invalid label: "${label}"`);
-        }
-        parts.push(encoded.length);
-        parts.push(...encoded);
-    }
-    parts.push(0);
-    return toHex(new Uint8Array(parts));
-}
 
 createBindingButton.addEventListener('click', async function(event) {
     event.preventDefault();
