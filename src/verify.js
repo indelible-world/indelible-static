@@ -200,7 +200,8 @@ verifyButton.addEventListener('click', async function(event) {
     console.log(firstAttestation);
     verifyResult.hidden = false;
     verifyHeading.textContent = "Attestation Found";
-    verifyDetails.textContent = `This text/CID has been published to the Indelible Protocol by ${firstAttestation[3]} at timestamp ${firstAttestation[4]}.`
+    const attestationDate = new Date(Number(firstAttestation[4]) * 1000).toLocaleString();
+    verifyDetails.textContent = `This text/CID has been published to the Indelible Protocol by ${firstAttestation[3]} at ${attestationDate}.`
     return
 
 
