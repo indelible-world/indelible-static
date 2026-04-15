@@ -97,6 +97,17 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
 
+// Populate fields from URL params
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('text')) {
+    articleInput.value = urlParams.get('text');
+    articleInput.dispatchEvent(new Event('input'));
+    cidField.value = await createRawCIDv1(urlParams.get('text'));
+    cidField.readOnly = true;
+} else if (urlParams.has('cid')) {
+    cidField.value = urlParams.get('cid');
+    cidField.dispatchEvent(new Event('input'));
+}
 
 articleInput.addEventListener('input', async function (event) {
     
@@ -118,6 +129,9 @@ cidField.addEventListener('input', async function (event) {
 
 
 const authorityField = document.getElementById('authorityInput');
+if (urlParams.has('authority')) {
+    authorityField.value = urlParams.get('authority');
+}
 
 const verifyStatus = document.getElementById('verifyStatus');
 const verifyResult = document.getElementById('verifyResult');
@@ -210,3 +224,5 @@ verifyButton.addEventListener('click', async function(event) {
         
     }
 });
+
+
