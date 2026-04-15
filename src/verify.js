@@ -96,7 +96,7 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
-const authorityField = document.getElementById('authorityInput');
+
 
 articleInput.addEventListener('input', async function (event) {
     
@@ -116,8 +116,96 @@ cidField.addEventListener('input', async function (event) {
     }
 });
 
+
+const authorityField = document.getElementById('authorityInput');
+
+const verifyStatus = document.getElementById('verifyStatus');
+const verifyResult = document.getElementById('verifyResult');
+const verifyHeading = document.getElementById('verifyHeading');
+const verifyDetails = document.getElementById('verifyDetails');
+
+
+
+async function cidToAttestationIndices(ipfsHash, indexOfAttestationIndex) {
+    let attestationIndex = 0;
+    //try {
+    attestationIndex = await client.readContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'cidToAttestationIndices',
+            args: [ipfsHash, indexOfAttestationIndex],
+        });
+    //} catch (ContractFunctionExecutionError) {
+    //    attestationIndex = 0;
+    //}
+
+    return attestationIndex
+}
+
+async function getAttestationByIndex(index) {
+    //let attestationIndex = 0;
+    //try {
+    let attestationIndex = await client.readContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'attestations',
+            args: [index],
+        });
+    //} catch (ContractFunctionExecutionError) {
+    //    attestationIndex = 0;
+    //}
+
+    return attestationIndex
+}
+
+async function cidAndAddressToAttestationIndices(ipfsHash, address) {
+    let attestationIndex = 0;
+    try {
+        attestationIndex = await client.readContract({
+                address: taanqAddress,
+                abi: taanqAbi,
+                functionName: 'cidAndAddressToAttestationIndices',
+                args: [ipfsHash, address],
+            });
+    } catch (ContractFunctionExecutionError) {
+        attestationIndex = 0;
+    }
+
+    return attestationIndex
+}
+
 const verifyButton = document.getElementById('verifyButton');
 verifyButton.addEventListener('click', async function(event) {
     event.preventDefault()
 
+    const cid = cidField.value;
+    const authority = authorityField.value;
+
+    const ipfsHash = decodeCidToIpfsHash(cid);
+
+    let firstAttestationIndex = 0;
+
+
+    firstAttestationIndex = await cidToAttestationIndices(ipfsHash, 0);
+    
+
+    if (firstAttestationIndex == 0) {
+        verifyResult.hidden = false;
+        verifyHeading.textContent = "No Attestation Found";
+        verifyDetails.textContent = "This text/CID has not yet been published to the Indelible Protocol."
+        return
+    }
+
+    const firstAttestation = await getAttestationByIndex(firstAttestationIndex);
+    console.log(firstAttestation);
+    verifyResult.hidden = false;
+    verifyHeading.textContent = "Attestation Found";
+    verifyDetails.textContent = `This text/CID has been published to the Indelible Protocol by ${firstAttestation[3]} at timestamp ${firstAttestation[4]}.`
+    return
+
+
+    if (authority) {
+        const authorityAttestationIndex = cidAndAddressToAttestationIndices(ipfsHash, authority);
+        
+    }
 });
