@@ -128,32 +128,32 @@ const verifyDetails = document.getElementById('verifyDetails');
 
 async function cidToAttestationIndices(ipfsHash, indexOfAttestationIndex) {
     let attestationIndex = 0;
-    //try {
-    attestationIndex = await client.readContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'cidToAttestationIndices',
-            args: [ipfsHash, indexOfAttestationIndex],
-        });
-    //} catch (ContractFunctionExecutionError) {
-    //    attestationIndex = 0;
-    //}
+    try {
+        attestationIndex = await client.readContract({
+                address: taanqAddress,
+                abi: taanqAbi,
+                functionName: 'cidToAttestationIndices',
+                args: [ipfsHash, indexOfAttestationIndex],
+            });
+    } catch (ContractFunctionExecutionError) {
+        attestationIndex = 0;
+    }
 
     return attestationIndex
 }
 
 async function getAttestationByIndex(index) {
-    //let attestationIndex = 0;
-    //try {
-    let attestationIndex = await client.readContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'attestations',
-            args: [index],
-        });
-    //} catch (ContractFunctionExecutionError) {
-    //    attestationIndex = 0;
-    //}
+    let attestationIndex = 0;
+    try {
+        attestationIndex = await client.readContract({
+                address: taanqAddress,
+                abi: taanqAbi,
+                functionName: 'attestations',
+                args: [index],
+            });
+    } catch (ContractFunctionExecutionError) {
+        attestationIndex = 0;
+    }
 
     return attestationIndex
 }
