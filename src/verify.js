@@ -188,13 +188,7 @@ async function cidAndAddressToAttestationIndices(ipfsHash, address) {
     return attestationIndex
 }
 
-const verifyButton = document.getElementById('verifyButton');
-verifyButton.addEventListener('click', async function(event) {
-    event.preventDefault()
-
-    const cid = cidField.value;
-    const authority = authorityField.value;
-
+async function verifyCid(cid, authority = null) {
     const ipfsHash = decodeCidToIpfsHash(cid);
 
     let firstAttestationIndex = 0;
@@ -216,13 +210,27 @@ verifyButton.addEventListener('click', async function(event) {
     verifyHeading.textContent = "Attestation Found";
     const attestationDate = new Date(Number(firstAttestation[4]) * 1000).toLocaleString();
     verifyDetails.textContent = `This text/CID has been published to the Indelible Protocol by ${firstAttestation[3]} at ${attestationDate}.`
-    return
+    
 
 
     if (authority) {
         const authorityAttestationIndex = cidAndAddressToAttestationIndices(ipfsHash, authority);
         
+    } else {
+        return 
     }
+}
+
+
+
+const verifyButton = document.getElementById('verifyButton');
+verifyButton.addEventListener('click', async function(event) {
+    event.preventDefault()
+
+    const cid = cidField.value;
+    const authority = authorityField.value;
+
+    const verification = verifyCid(cid, authority);
 });
 
 
