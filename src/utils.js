@@ -1,6 +1,7 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { CID } from 'multiformats/cid';
 import { sha256 } from 'multiformats/hashes/sha2';
+import * as Digest from 'multiformats/hashes/digest';
 import * as raw from 'multiformats/codecs/raw';
 import { base32 } from 'multiformats/bases/base32';
 import { toHex } from 'viem';
@@ -17,13 +18,28 @@ export async function hexHashContent(data) {
     return toHex(await hashContent(data));
 }
 
+export async function getCIDFromHash(hash) {
+    const cid = CID.createV1(raw.code, hash);
+    return cid.toString(base32);
+}
+
+// Reconstruct a CID from a raw 32-byte SHA-256 digest (as stored on-chain)
+export function getCIDFromRawDigest(digestBytes) {
+    const multihash = Digest.create(sha256.code, digestBytes);
+    const cid = CID.createV1(raw.code, multihash);
+    return cid.toString(base32);
+}
+
+export function prettifyTimestamp(timestamp) {
+    return new Date(Number(timestamp) * 1000).toLocaleString()
+}
+
 export async function createRawCIDv1(data) {
     if (typeof data === 'string') {
         data = new TextEncoder().encode(data);
     }
     const multihash = await sha256.digest(data);
-    const cid = CID.createV1(raw.code, multihash);
-    return cid.toString(base32);
+    return getCIDFromHash(multihash);
 }
 
 const merkleSplit = 46;

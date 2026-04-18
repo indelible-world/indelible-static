@@ -1,8 +1,8 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
-import { createPublicClient, http, toHex } from 'viem'
+import { createPublicClient, http, toHex, fromHex } from 'viem'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import taanqAbi from './assets/contractAbi/taanqAbi.json'
-import { hashContent, createRawCIDv1, buildTree, dnsEncodeName, decodeCidToIpfsHash } from '/src/utils.js';
+import { hashContent, createRawCIDv1, getCIDFromHash, getCIDFromRawDigest, buildTree, dnsEncodeName, decodeCidToIpfsHash, prettifyTimestamp } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 
@@ -157,19 +157,19 @@ async function cidToAttestationIndices(ipfsHash, indexOfAttestationIndex) {
 }
 
 async function getAttestationByIndex(index) {
-    let attestationIndex = 0;
+    let attestation = 0;
     try {
-        attestationIndex = await client.readContract({
+        attestation = await client.readContract({
                 address: taanqAddress,
                 abi: taanqAbi,
                 functionName: 'attestations',
                 args: [index],
             });
     } catch (ContractFunctionExecutionError) {
-        attestationIndex = 0;
+        attestation = 0;
     }
 
-    return attestationIndex
+    return await createAttestationFromRPC(attestation);
 }
 
 async function cidAndAddressToAttestationIndices(ipfsHash, address) {
@@ -188,7 +188,40 @@ async function cidAndAddressToAttestationIndices(ipfsHash, address) {
     return attestationIndex
 }
 
+async function createAttestationFromRPC(rpcResponse) {
+    const cid = getCIDFromRawDigest(fromHex(rpcResponse[0], 'bytes'));
+    return new Attestation(
+        cid,
+        rpcResponse[1],
+        rpcResponse[2],
+        rpcResponse[3],
+        rpcResponse[4],
+        rpcResponse[5]
+    );
+}
+
+class Attestation {
+    constructor(cid, qvHash, parentIpfsHash, authority, timestamp, revokedAt) {
+        this.cid = cid;
+        this.qvHash = qvHash;
+        this.parentIpfsHash = parentIpfsHash;
+        this.authority = authority;
+        this.timestamp = timestamp;
+        this.revokedAt = revokedAt;
+    }
+}
+class VerificationResult {
+    constructor(resultCode, headline, details, attestations) {
+        this.resultCode = resultCode;
+        this.headline = headline;
+        this.details = details;
+        this.attestations = attestations;
+    }
+}
+
 async function verifyCid(cid, authority = null) {
+    let resultCode = [];
+    let details = [];
     const ipfsHash = decodeCidToIpfsHash(cid);
 
     let firstAttestationIndex = 0;
@@ -198,26 +231,81 @@ async function verifyCid(cid, authority = null) {
     
 
     if (firstAttestationIndex == 0) {
-        verifyResult.hidden = false;
-        verifyHeading.textContent = "No Attestation Found";
-        verifyDetails.textContent = "This text/CID has not yet been published to the Indelible Protocol."
-        return
+        resultCode.push(0);
+        if (authority) {
+            resultCode.push(2);
+        }
+        details.push("This text/CID has not yet been published to the Indelible Protocol.");
+        return new VerificationResult(
+            resultCode,
+            "No Attestation Found",
+            details,
+            []
+        );
     }
 
     const firstAttestation = await getAttestationByIndex(firstAttestationIndex);
     console.log(firstAttestation);
-    verifyResult.hidden = false;
-    verifyHeading.textContent = "Attestation Found";
-    const attestationDate = new Date(Number(firstAttestation[4]) * 1000).toLocaleString();
-    verifyDetails.textContent = `This text/CID has been published to the Indelible Protocol by ${firstAttestation[3]} at ${attestationDate}.`
-    
 
 
     if (authority) {
-        const authorityAttestationIndex = cidAndAddressToAttestationIndices(ipfsHash, authority);
+        let authorityAttestation = 0;
+        if (firstAttestation.authority.toLowerCase() != authority.toLowerCase()) {
+            const authorityAttestationIndex = await cidAndAddressToAttestationIndices(ipfsHash, authority);
+            if (authorityAttestationIndex == 0) {
+                resultCode.push(2);
+                details.push(`This text/CID has not yet been published to the Indelible Protocol by ${authority}.`);
+                return new VerificationResult(
+                    resultCode,
+                    "Unverified",
+                    details,
+                    [firstAttestation]
+                );
+            }
+            details.push(`It was first published to the Indelible Protocol by ${firstAttestation.authority} at ${prettifyTimestamp(firstAttestation.timestamp)}`);
+            authorityAttestation = await getAttestationByIndex(authorityAttestationIndex);
+        } else {
+            authorityAttestation = firstAttestation;
+        }
+
+        if (authorityAttestation.revokedAt != 0) {
+            resultCode.push(3);
+            details.push(`It was revoked at ${prettifyTimestamp(authorityAttestation.revokedAt)}`);
+            return new VerificationResult(
+                resultCode,
+                "Attestation Revoked",
+                details,
+                [firstAttestation, authorityAttestation]
+            );
+        }
+        resultCode.push(1);
+        details.push(`This text/CID has been published to the Indelible Protocol by ${authorityAttestation.authority} at ${prettifyTimestamp(authorityAttestation.timestamp)}.`);
+        return new VerificationResult(
+            resultCode,
+            "Verified",
+            details,
+            [firstAttestation, authorityAttestation]
+        );
+        
+        
+
+        
+
         
     } else {
-        return 
+        if (firstAttestation.revokedAt != 0) {
+            resultCode.push(3);
+            details.push(`It was revoked at ${prettifyTimestamp(firstAttestation.revokedAt)}`);
+        }
+        const attestationDate = prettifyTimestamp(firstAttestation.timestamp);
+        resultCode.push(1);
+        details.push(`This text/CID has been published to the Indelible Protocol by ${firstAttestation.authority} at ${attestationDate}.`);
+        return new VerificationResult(
+            resultCode,
+            "Attestation Found",
+            details,
+            [firstAttestation]
+        );
     }
 }
 
@@ -230,7 +318,11 @@ verifyButton.addEventListener('click', async function(event) {
     const cid = cidField.value;
     const authority = authorityField.value;
 
-    const verification = verifyCid(cid, authority);
+    const verification = await verifyCid(cid, authority);
+    verifyResult.hidden = false;
+    verifyHeading.textContent = verification.headline;
+    verifyDetails.textContent = verification.details;
+
 });
 
 
