@@ -313,16 +313,46 @@ async function verifyCid(cid, authority = null) {
 
 const verifyButton = document.getElementById('verifyButton');
 verifyButton.addEventListener('click', async function(event) {
-    event.preventDefault()
+    event.preventDefault();
 
     const cid = cidField.value;
     const authority = authorityField.value;
 
-    const verification = await verifyCid(cid, authority);
-    verifyResult.hidden = false;
-    verifyHeading.textContent = verification.headline;
-    verifyDetails.textContent = verification.details;
+    verifyResult.hidden = true;
+    verifyStatus.hidden = false;
+    verifyStatus.textContent = 'Verifying…';
+    verifyButton.disabled = true;
 
+    const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked' };
+
+    try {
+        const verification = await verifyCid(cid, authority);
+        const primaryCode = verification.resultCode[verification.resultCode.length - 1];
+        verifyResult.className = codeClassMap[primaryCode] ?? '';
+
+        verifyHeading.textContent = verification.headline;
+
+        verifyDetails.innerHTML = '';
+        for (const detail of verification.details) {
+            const li = document.createElement('li');
+            li.textContent = detail;
+            verifyDetails.appendChild(li);
+        }
+
+        verifyResult.hidden = false;
+    } catch (err) {
+        verifyResult.className = 'result-not-found';
+        verifyHeading.textContent = 'Error';
+        verifyDetails.innerHTML = '';
+        const li = document.createElement('li');
+        li.textContent = err.message;
+        verifyDetails.appendChild(li);
+        verifyResult.hidden = false;
+        console.error(err);
+    } finally {
+        verifyStatus.hidden = true;
+        verifyButton.disabled = false;
+    }
 });
 
 

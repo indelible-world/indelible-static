@@ -171,3 +171,50 @@ button:hover {
 #verifyQuoteDetails li {
   padding: 4px 0;
 }
+
+#verifyResult {
+  margin-top: 16px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  border-left: 5px solid #ccc;
+  background: #f5f5f5;
+  max-width: 600px;
+}
+
+#verifyResult.result-verified {
+  border-color: #2a9e2a;
+  background: #f0faf0;
+}
+
+#verifyResult.result-unverified {
+  border-color: #d08020;
+  background: #fffbf0;
+}
+
+#verifyResult.result-revoked {
+  border-color: #cc3333;
+  background: #fff5f5;
+}
+
+#verifyResult.result-not-found {
+  border-color: #999;
+  background: #f5f5f5;
+}
+
+#verifyHeading {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+#verifyDetails {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+#verifyDetails li {
+  padding: 4px 0;
+  color: #444;
+  font-size: 15px;
+}
