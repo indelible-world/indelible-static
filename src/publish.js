@@ -211,32 +211,41 @@ commitAttestationButton.addEventListener('click', async function(event) {
     commitTimer.textContent = 'Processing...';
     commitAttestationButton.disabled = true;
 
-    const hash = await walletClient.writeContract({
-        address: taanqAddress,
-        abi: taanqAbi,
-        functionName: 'commit',
-        args: [saltedHash]
-    });
+    try {
+        const hash = await walletClient.writeContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'commit',
+            args: [saltedHash]
+        });
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
-    if (receipt.status !== 'success') {
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== 'success') {
+            throw new Error('Commit transaction failed');
+        }
+
+        let parentIpfsHash = "";
+        if (parentIpfsHashField.value == "") {
+            parentIpfsHash = '0x' + '00'.repeat(32);
+        } else {
+            parentIpfsHash = parentIpfsHashField.value;
+        }
+
+        pendingCommit = [ saltedHash, salt, ipfsHash, qvHash, parentIpfsHash, authority ];
+        localStorage.setItem('pendingCommit', JSON.stringify(pendingCommit));
+        localStorage.setItem('revealAt', (Date.now() + 60000).toString());
+
+        startCommitTimer(60);
+    } catch (err) {
         commitTimer.hidden = true;
         commitAttestationButton.disabled = false;
-        throw new Error('Commit transaction failed');
+        if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
+            commitTimer.textContent = '';
+            alert('Transaction rejected.');
+        } else {
+            alert('Error: ' + (err.shortMessage || err.message));
+        }
     }
-
-    let parentIpfsHash = "";
-    if (parentIpfsHashField.value == "") {
-        parentIpfsHash = '0x' + '00'.repeat(32);
-    } else {
-        parentIpfsHash = parentIpfsHashField.value;
-    }
-
-    pendingCommit = [ saltedHash, salt, ipfsHash, qvHash, parentIpfsHash, authority ];
-    localStorage.setItem('pendingCommit', JSON.stringify(pendingCommit));
-    localStorage.setItem('revealAt', (Date.now() + 60000).toString());
-
-    startCommitTimer(60);
 });
 
 revealButton.addEventListener('click', async function(event) {
@@ -252,16 +261,24 @@ revealButton.addEventListener('click', async function(event) {
         });
     }
 
-    const hash = await walletClient.writeContract({
-        address: taanqAddress,
-        abi: taanqAbi,
-        functionName: 'reveal',
-        args: pendingCommit
-    });
+    try {
+        const hash = await walletClient.writeContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'reveal',
+            args: pendingCommit
+        });
 
-    localStorage.removeItem('pendingCommit');
-    pendingCommit = null;
-    revealButton.hidden = true;
+        localStorage.removeItem('pendingCommit');
+        pendingCommit = null;
+        revealButton.hidden = true;
+    } catch (err) {
+        if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
+            alert('Transaction rejected.');
+        } else {
+            alert('Error: ' + (err.shortMessage || err.message));
+        }
+    }
 });
 
 // --- Revoke Attestation ---
