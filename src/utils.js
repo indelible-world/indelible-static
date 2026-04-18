@@ -42,7 +42,7 @@ export async function createRawCIDv1(data) {
     return getCIDFromHash(multihash);
 }
 
-const merkleSplit = 46;
+export const merkleSplit = 46;
 
 export function buildTree(text) {
     const chunks = [];

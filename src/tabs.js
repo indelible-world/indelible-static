@@ -42,8 +42,12 @@ if (!location.hash) {
 } else {
     // Figure out which group the hash belongs to and activate it
     const hash = location.hash.slice(1);
-    const group = hash.split('-')[0];
-    const mainLink = document.querySelector('#mainnav a[data-group="' + group + '"]');
+    // Try exact match first, then fall back to prefix match
+    let mainLink = document.querySelector('#mainnav a[data-group="' + hash + '"]');
+    if (!mainLink) {
+        const group = hash.split('-')[0];
+        mainLink = document.querySelector('#mainnav a[data-group="' + group + '"]');
+    }
     if (mainLink) {
         mainLink.click();
         // Then activate the specific sub-link

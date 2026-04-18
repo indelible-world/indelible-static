@@ -124,11 +124,13 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
         if (allProofsValid && verification.attestations.length > 0) {
             const linkLi = document.createElement('li');
             linkLi.style.marginTop = '8px';
+            const seenAuthorities = new Set();
             for (const att of verification.attestations) {
-                if (att.authority) {
+                if (att.authority && !seenAuthorities.has(att.authority.toLowerCase())) {
+                    seenAuthorities.add(att.authority.toLowerCase());
                     const link = document.createElement('a');
                     link.className = 'authority-link';
-                    const explorerParams = new URLSearchParams({ authority: att.authority });
+                    const explorerParams = new URLSearchParams({ authority: att.authority, timestamp: att.timestamp.toString() });
                     link.href = `${window.location.pathname}?${explorerParams.toString()}#authority-explorer`;
                     link.textContent = `View ${att.authority.slice(0, 6)}…${att.authority.slice(-4)} in Authority Explorer →`;
                     linkLi.appendChild(link);
@@ -393,6 +395,26 @@ verifyButton.addEventListener('click', async function(event) {
             const li = document.createElement('li');
             li.textContent = detail;
             verifyDetails.appendChild(li);
+        }
+
+        // Add authority explorer links for each attestation
+        if (verification.attestations.length > 0) {
+            const linkLi = document.createElement('li');
+            linkLi.style.marginTop = '8px';
+            const seenAuthorities = new Set();
+            for (const att of verification.attestations) {
+                if (att.authority && !seenAuthorities.has(att.authority.toLowerCase())) {
+                    seenAuthorities.add(att.authority.toLowerCase());
+                    const link = document.createElement('a');
+                    link.className = 'authority-link';
+                    const explorerParams = new URLSearchParams({ authority: att.authority, timestamp: att.timestamp.toString() });
+                    link.href = `${window.location.pathname}?${explorerParams.toString()}#authority-explorer`;
+                    link.textContent = `View ${att.authority.slice(0, 6)}…${att.authority.slice(-4)} in Authority Explorer →`;
+                    linkLi.appendChild(link);
+                    linkLi.appendChild(document.createElement('br'));
+                }
+            }
+            verifyDetails.appendChild(linkLi);
         }
 
         verifyResult.hidden = false;

@@ -218,3 +218,139 @@ button:hover {
   color: #444;
   font-size: 15px;
 }
+
+/* --- Authority Explorer --- */
+
+.binding-card {
+  margin-top: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border-left: 5px solid #ccc;
+  background: #f5f5f5;
+  max-width: 600px;
+}
+
+.binding-card.binding-active {
+  border-color: #2a9e2a;
+  background: #f0faf0;
+}
+
+.binding-card.binding-revoked {
+  border-color: #cc3333;
+  background: #fff5f5;
+}
+
+.binding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.binding-header strong a {
+  font-size: 17px;
+  color: #222;
+  text-decoration: none;
+}
+
+.binding-header strong a:hover {
+  text-decoration: underline;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.badge-active {
+  background: #2a9e2a;
+  color: #fff;
+}
+
+.badge-revoked {
+  background: #cc3333;
+  color: #fff;
+}
+
+.binding-details {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.binding-details li {
+  padding: 3px 0;
+  color: #444;
+  font-size: 14px;
+}
+
+.binding-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.binding-details a {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.binding-details a:hover {
+  text-decoration: underline;
+}
+
+.binding-links {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.explorer-address {
+  font-family: monospace;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.explorer-ts-note {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #666;
+}
+
+.explorer-ts-note a {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.explorer-ts-note a:hover {
+  text-decoration: underline;
+}
+
+.no-results {
+  color: #888;
+  font-style: italic;
+}
+
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  margin-left: 12px;
+  cursor: pointer;
+  color: #444;
+}
+
+.toggle-label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.authority-link {
+  color: #1a73e8;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.authority-link:hover {
+  text-decoration: underline;
+}
