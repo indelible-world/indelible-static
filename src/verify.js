@@ -80,10 +80,66 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
             throw new Error('Invalid proof file format. Expected ipfsCid and proof array.');
         }
 
-        // Decode CID to bytes32 ipfsHash
-        const ipfsHash = decodeCidToIpfsHash(proofData.ipfsCid);
+        const verification = await verifyCid(proofData.ipfsCid, proofData.authority);
+        const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked' };
+        const primaryCode = verification.resultCode[verification.resultCode.length - 1];
 
+        // Get the merkle root from the authority attestation (last attestation returned)
+        const attestation = verification.attestations[verification.attestations.length - 1];
+        const merkleRoot = attestation?.qvHash;
 
+        // Verify each proof item and assemble the quote
+        let allProofsValid = true;
+        const sortedProofs = [...proofData.proof].sort((a, b) => Number(a.value[0]) - Number(b.value[0]));
+
+        if (merkleRoot) {
+            for (const item of sortedProofs) {
+                const valid = StandardMerkleTree.verify(merkleRoot, ['string', 'string'], item.value, item.proof);
+                if (!valid) {
+                    allProofsValid = false;
+                    break;
+                }
+            }
+        } else {
+            allProofsValid = false;
+        }
+
+        const quoteText = sortedProofs.map(item => item.value[1]).join('');
+
+        verifyQuoteResult.className = allProofsValid ? codeClassMap[primaryCode] : 'result-unverified';
+        verifyQuoteHeading.textContent = allProofsValid ? verification.headline : 'Invalid Proof';
+        verifyQuoteText.textContent = quoteText;
+
+        verifyQuoteDetails.innerHTML = '';
+        const detailLines = allProofsValid
+            ? verification.details
+            : ['The Merkle proof could not be verified against the on-chain attestation.'];
+        for (const detail of detailLines) {
+            const li = document.createElement('li');
+            li.textContent = detail;
+            verifyQuoteDetails.appendChild(li);
+        }
+
+        // Add authority explorer links for quote verification
+        if (allProofsValid && verification.attestations.length > 0) {
+            const linkLi = document.createElement('li');
+            linkLi.style.marginTop = '8px';
+            for (const att of verification.attestations) {
+                if (att.authority) {
+                    const link = document.createElement('a');
+                    link.className = 'authority-link';
+                    const explorerParams = new URLSearchParams({ authority: att.authority });
+                    link.href = `${window.location.pathname}?${explorerParams.toString()}#authority-explorer`;
+                    link.textContent = `View ${att.authority.slice(0, 6)}…${att.authority.slice(-4)} in Authority Explorer →`;
+                    linkLi.appendChild(link);
+                    linkLi.appendChild(document.createElement('br'));
+                }
+            }
+            verifyQuoteDetails.appendChild(linkLi);
+        }
+
+        verifyQuoteStatus.hidden = true;
+        verifyQuoteResult.hidden = false;
     } catch (err) {
         verifyQuoteStatus.textContent = 'Error: ' + err.message;
         verifyQuoteStatus.style.color = 'red';
