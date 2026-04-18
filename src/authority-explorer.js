@@ -60,6 +60,7 @@ const explorerHeading = document.getElementById('explorerHeading');
 const explorerMeta = document.getElementById('explorerMeta');
 const explorerBindings = document.getElementById('explorerBindings');
 const showRevokedToggle = document.getElementById('showRevokedToggle');
+const clearExplorerTimestampButton = document.getElementById('clearExplorerTimestamp');
 
 // --- URL params ---
 const urlParams = new URLSearchParams(window.location.search);
@@ -181,6 +182,23 @@ function buildExplorerUrl(params) {
     return `${base}?${search.toString()}#authority-explorer`;
 }
 
+function getTimestampFilter() {
+    const value = explorerTimestamp.value.trim();
+    if (!value) return null;
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+        throw new Error('Timestamp must be a non-negative Unix timestamp in seconds.');
+    }
+
+    return parsed;
+}
+
+function isBindingActiveAtTimestamp(verification, timestamp) {
+    return verification.startTimestamp <= timestamp &&
+        (verification.endTimestamp === 0 || verification.endTimestamp > timestamp);
+}
+
 function makeAddressLink(address) {
     const a = document.createElement('a');
     a.href = buildExplorerUrl({ authority: address });
@@ -224,14 +242,15 @@ function makeEnsAppLink(ensName) {
 }
 
 // --- Render a single binding card ---
-function renderBindingCard(verification, showRevoked) {
+function renderBindingCard(verification, showRevoked, timestamp) {
+    const hasTimestampFilter = timestamp !== null;
     const now = Math.floor(Date.now() / 1000);
-    const ts = explorerTimestamp.value ? Number(explorerTimestamp.value) : now;
-    const isActive = verification.startTimestamp <= ts &&
-        (verification.endTimestamp === 0 || verification.endTimestamp > ts);
+    const ts = hasTimestampFilter ? timestamp : now;
+    const isActive = isBindingActiveAtTimestamp(verification, ts);
     const isRevoked = verification.endTimestamp !== 0 && verification.endTimestamp <= ts;
 
-    if (isRevoked && !showRevoked) return null;
+    if (hasTimestampFilter && !isActive) return null;
+    if (!hasTimestampFilter && isRevoked && !showRevoked) return null;
 
     const card = document.createElement('div');
     card.className = 'binding-card' + (isRevoked ? ' binding-revoked' : ' binding-active');
@@ -300,7 +319,7 @@ async function performLookup() {
 
     try {
         const showRevoked = showRevokedToggle.checked;
-        const ts = explorerTimestamp.value ? Number(explorerTimestamp.value) : null;
+        const ts = getTimestampFilter();
 
         if (isAddress(input)) {
             await lookupByAddress(input, showRevoked, ts);
@@ -343,7 +362,7 @@ async function lookupByAddress(address, showRevoked, timestamp) {
     explorerMeta.appendChild(document.createTextNode(' '));
     explorerMeta.appendChild(makeEtherscanLink(address));
 
-    if (timestamp) {
+    if (timestamp !== null) {
         const tsNote = document.createElement('div');
         tsNote.className = 'explorer-ts-note';
         tsNote.textContent = `Checking validity at: ${prettifyTimestamp(timestamp)}`;
@@ -359,7 +378,7 @@ async function lookupByAddress(address, showRevoked, timestamp) {
 
     let renderedCount = 0;
     for (const binding of bindings) {
-        const card = renderBindingCard(binding, showRevoked);
+        const card = renderBindingCard(binding, showRevoked, timestamp);
         if (card) {
             explorerBindings.appendChild(card);
             renderedCount++;
@@ -367,7 +386,11 @@ async function lookupByAddress(address, showRevoked, timestamp) {
     }
 
     if (renderedCount === 0) {
-        explorerBindings.innerHTML = '<p class="no-results">No active ENS bindings found. Enable "Show revoked bindings" to see all.</p>';
+        if (timestamp !== null) {
+            explorerBindings.innerHTML = '<p class="no-results">No ENS bindings were active at this timestamp.</p>';
+        } else {
+            explorerBindings.innerHTML = '<p class="no-results">No active ENS bindings found. Enable "Show revoked bindings" to see all.</p>';
+        }
     }
 }
 
@@ -385,7 +408,7 @@ async function lookupByEns(ensName, showRevoked, timestamp) {
     explorerMeta.innerHTML = '';
     explorerMeta.appendChild(makeEnsAppLink(normalizedName));
 
-    if (timestamp) {
+    if (timestamp !== null) {
         const tsNote = document.createElement('div');
         tsNote.className = 'explorer-ts-note';
         tsNote.textContent = `Checking validity at: ${prettifyTimestamp(timestamp)}`;
@@ -415,11 +438,15 @@ async function lookupByEns(ensName, showRevoked, timestamp) {
         explorerMeta.appendChild(addrNote);
     }
 
-    const card = renderBindingCard(verification, showRevoked);
+    const card = renderBindingCard(verification, showRevoked, timestamp);
     if (card) {
         explorerBindings.appendChild(card);
     } else {
-        explorerBindings.innerHTML = '<p class="no-results">This binding is revoked. Enable "Show revoked bindings" to view.</p>';
+        if (timestamp !== null) {
+            explorerBindings.innerHTML = '<p class="no-results">No binding was active at this timestamp.</p>';
+        } else {
+            explorerBindings.innerHTML = '<p class="no-results">This binding is revoked. Enable "Show revoked bindings" to view.</p>';
+        }
     }
 }
 
@@ -434,6 +461,25 @@ showRevokedToggle.addEventListener('change', () => {
         performLookup();
     }
 });
+
+function syncClearTimestampButton() {
+    if (!clearExplorerTimestampButton) return;
+    clearExplorerTimestampButton.hidden = explorerTimestamp.value.trim() === '';
+}
+
+explorerTimestamp.addEventListener('input', syncClearTimestampButton);
+
+if (clearExplorerTimestampButton) {
+    clearExplorerTimestampButton.addEventListener('click', () => {
+        explorerTimestamp.value = '';
+        syncClearTimestampButton();
+        if (!explorerResult.hidden) {
+            performLookup();
+        }
+    });
+}
+
+syncClearTimestampButton();
 
 // Auto-run if params provided
 if (explorerInput.value) {

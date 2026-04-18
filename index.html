@@ -75,7 +75,10 @@
             <label class="inputLabel" for="explorerInput">Authority Address or ENS Name</label>
             <div><input type="text" class="input cid" id="explorerInput" placeholder="0x... or name.eth"></div>
             <label class="inputLabel" for="explorerTimestamp">Timestamp (optional)</label>
-            <div><input type="text" class="input cid" id="explorerTimestamp" placeholder="Unix timestamp (defaults to now)"></div>
+            <div class="timestamp-input-row">
+                <input type="text" class="input cid" id="explorerTimestamp" placeholder="Unix timestamp (defaults to now)">
+                <button type="button" id="clearExplorerTimestamp" hidden>Remove timestamp</button>
+            </div>
             <div class="commit-actions">
                 <button type="submit" class="inputLabel" id="explorerButton">Look Up</button>
                 <label class="toggle-label">

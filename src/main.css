@@ -345,6 +345,20 @@ button:hover {
   cursor: pointer;
 }
 
+.timestamp-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.timestamp-input-row input {
+  flex: 1;
+}
+
+.timestamp-input-row button {
+  white-space: nowrap;
+}
+
 .authority-link {
   color: #1a73e8;
   text-decoration: none;
