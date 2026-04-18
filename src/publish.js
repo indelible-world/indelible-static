@@ -1,6 +1,6 @@
 import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
-import { createRawCIDv1, buildTree, dnsEncodeName, hexHashContent } from '/src/utils.js';
+import { createRawCIDv1, buildTree, dnsEncodeName, hexHashContent, merkleSplit } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
