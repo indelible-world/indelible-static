@@ -462,24 +462,24 @@ showRevokedToggle.addEventListener('change', () => {
     }
 });
 
-function syncClearTimestampButton() {
+function syncClearExplorerTimestampButton() {
     if (!clearExplorerTimestampButton) return;
     clearExplorerTimestampButton.hidden = explorerTimestamp.value.trim() === '';
 }
 
-explorerTimestamp.addEventListener('input', syncClearTimestampButton);
+explorerTimestamp.addEventListener('input', syncClearExplorerTimestampButton);
 
 if (clearExplorerTimestampButton) {
     clearExplorerTimestampButton.addEventListener('click', () => {
         explorerTimestamp.value = '';
-        syncClearTimestampButton();
+        syncClearExplorerTimestampButton();
         if (!explorerResult.hidden) {
             performLookup();
         }
     });
 }
 
-syncClearTimestampButton();
+syncClearExplorerTimestampButton();
 
 // Auto-run if params provided
 if (explorerInput.value) {
