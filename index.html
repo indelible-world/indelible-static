@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indelible Verify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="navbar">
@@ -12,21 +15,21 @@
             <a href="#" data-group="verify-quote">Verify Quote</a>
             <a href="#" data-group="authority-explorer">Authority Explorer</a>
         </nav>
-        <a href="publish" class="changePage">Go to Publish -></a>
-
-        
-        <div class="settings-wrapper">
-            <button class="settings-button" id="settingsToggle">Settings</button>
-            <div class="settings-dropdown" id="settingsDropdown">
-                <label class="settings-label" for="chainSelect">Chain</label>
-                <select id="chainSelect" class="settings-input">
-                    <option value="sepolia" selected>Sepolia</option>
-                    <option value="ethereum">Ethereum</option>
-                    <option value="arbitrum">Arbitrum</option>
-                    <option value="base">Base</option>
-                </select>
-                <label class="settings-label" for="rpcInput">RPC URL</label>
-                <input id="rpcInput" class="settings-input"></input>
+        <div class="nav-utility">
+            <a href="publish" class="changePage">Go to Publish ↗</a>
+            <div class="settings-wrapper">
+                <button class="settings-button" id="settingsToggle">Settings</button>
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <label class="settings-label" for="chainSelect">Chain</label>
+                    <select id="chainSelect" class="settings-input">
+                        <option value="sepolia" selected>Sepolia</option>
+                        <option value="ethereum">Ethereum</option>
+                        <option value="arbitrum">Arbitrum</option>
+                        <option value="base">Base</option>
+                    </select>
+                    <label class="settings-label" for="rpcInput">RPC URL</label>
+                    <input id="rpcInput" class="settings-input"></input>
+                </div>
             </div>
         </div>
     </header>

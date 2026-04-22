@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indelible Publish</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="navbar">
@@ -11,34 +14,34 @@
             <a class="active" href="#" data-group="attestations">Attestations</a>
             <a href="#" data-group="delegations">Delegations</a>
             <a href="#" data-group="ens">ENS</a>
-            
         </nav>
-        <a href="/" class="changePage">Go to Verify -></a>
-        <div class="settings-wrapper">
-            <button class="settings-button" id="settingsToggle">Settings</button>
-            <div class="settings-dropdown" id="settingsDropdown">
-                <label class="settings-label" for="chainSelect">Chain</label>
-                <select id="chainSelect" class="settings-input">
-                    <option value="sepolia" selected>Sepolia</option>
-                    <option value="ethereum">Ethereum</option>
-                    <option value="arbitrum">Arbitrum</option>
-                    <option value="base">Base</option>
-                </select>
+        <div class="nav-utility">
+            <a href="/" class="changePage">Go to Verify ↗</a>
+            <div class="settings-wrapper">
+                <button class="settings-button" id="settingsToggle">Settings</button>
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <label class="settings-label" for="chainSelect">Chain</label>
+                    <select id="chainSelect" class="settings-input">
+                        <option value="sepolia" selected>Sepolia</option>
+                        <option value="ethereum">Ethereum</option>
+                        <option value="arbitrum">Arbitrum</option>
+                        <option value="base">Base</option>
+                    </select>
+                </div>
             </div>
         </div>
     </header>
-    <header class="navbar">
+    <header class="navbar subnav-row">
         <nav class="topnav subnav" id="subnav-attestations">
             <a class="active" href="#attestations-attest">Attest</a>
             <a href="#attestations-revoke">Revoke</a>
             <a href="#attestations-prove-quote">Prove Quote</a>
         </nav>
+        <nav class="topnav subnav" id="subnav-delegations">
+            <a href="#delegations-delegate">Delegate</a>
+            <a href="#delegations-revoke">Revoke</a>
+        </nav>
     </header>
-
-    <div class="topnav subnav" id="subnav-delegations">
-        <a href="#delegations-delegate">Delegate</a>
-        <a href="#delegations-revoke">Revoke</a>
-    </div>
 
     <section id="attestations-attest" class="sections">
         <form>
