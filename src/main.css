@@ -355,6 +355,10 @@ button:hover {
   cursor: pointer;
 }
 
+#explorerTimestamp {
+  width: 20em;
+}
+
 .authority-link {
   color: #1a73e8;
   text-decoration: none;
