@@ -181,24 +181,34 @@ button:hover {
   max-width: 600px;
 }
 
-#verifyResult.result-verified {
+#verifyResult.result-verified,
+#verifyQuoteResult.result-verified {
   border-color: #2a9e2a;
   background: #f0faf0;
 }
 
-#verifyResult.result-unverified {
-  border-color: #d08020;
-  background: #fffbf0;
-}
-
-#verifyResult.result-revoked {
+#verifyResult.result-unverified,
+#verifyQuoteResult.result-unverified {
   border-color: #cc3333;
   background: #fff5f5;
 }
 
-#verifyResult.result-not-found {
+#verifyResult.result-revoked,
+#verifyQuoteResult.result-revoked {
+  border-color: #cc3333;
+  background: #fff5f5;
+}
+
+#verifyResult.result-not-found,
+#verifyQuoteResult.result-not-found {
   border-color: #999;
   background: #f5f5f5;
+}
+
+#verifyResult.result-warning,
+#verifyQuoteResult.result-warning {
+  border-color: #d08020;
+  background: #fffbf0;
 }
 
 #verifyHeading {

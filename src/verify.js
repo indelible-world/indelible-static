@@ -81,8 +81,9 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
         }
 
         const verification = await verifyCid(proofData.ipfsCid, proofData.authority);
-        const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked' };
-        const primaryCode = verification.resultCode[verification.resultCode.length - 1];
+        const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
+        const codePriority = [2, 3, 0, 4, 1];
+        const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];
 
         // Get the merkle root from the authority attestation (last attestation returned)
         const attestation = verification.attestations[verification.attestations.length - 1];
@@ -381,11 +382,12 @@ verifyButton.addEventListener('click', async function(event) {
     verifyStatus.textContent = 'Verifying…';
     verifyButton.disabled = true;
 
-    const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked' };
+    const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
+    const codePriority = [2, 3, 0, 4, 1];
 
     try {
         const verification = await verifyCid(cid, authority);
-        const primaryCode = verification.resultCode[verification.resultCode.length - 1];
+        const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];
         verifyResult.className = codeClassMap[primaryCode] ?? '';
 
         verifyHeading.textContent = verification.headline;
