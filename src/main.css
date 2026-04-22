@@ -345,18 +345,8 @@ button:hover {
   cursor: pointer;
 }
 
-.timestamp-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.timestamp-input-row input {
-  flex: 1;
-}
-
-.timestamp-input-row button {
-  white-space: nowrap;
+#explorerTimestamp {
+  width: 20em;
 }
 
 .authority-link {

@@ -60,7 +60,7 @@ const explorerHeading = document.getElementById('explorerHeading');
 const explorerMeta = document.getElementById('explorerMeta');
 const explorerBindings = document.getElementById('explorerBindings');
 const showRevokedToggle = document.getElementById('showRevokedToggle');
-const clearExplorerTimestampButton = document.getElementById('clearExplorerTimestamp');
+
 
 // --- URL params ---
 const urlParams = new URLSearchParams(window.location.search);
@@ -462,24 +462,7 @@ showRevokedToggle.addEventListener('change', () => {
     }
 });
 
-function syncClearExplorerTimestampButton() {
-    if (!clearExplorerTimestampButton) return;
-    clearExplorerTimestampButton.hidden = explorerTimestamp.value.trim() === '';
-}
 
-explorerTimestamp.addEventListener('input', syncClearExplorerTimestampButton);
-
-if (clearExplorerTimestampButton) {
-    clearExplorerTimestampButton.addEventListener('click', () => {
-        explorerTimestamp.value = '';
-        syncClearExplorerTimestampButton();
-        if (!explorerResult.hidden) {
-            performLookup();
-        }
-    });
-}
-
-syncClearExplorerTimestampButton();
 
 // Auto-run if params provided
 if (explorerInput.value) {
