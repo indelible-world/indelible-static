@@ -80,7 +80,31 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
             throw new Error('Invalid proof file format. Expected ipfsCid and proof array.');
         }
 
-        const verification = await verifyCid(proofData.ipfsCid, proofData.authority);
+        // Auto-switch chain if chainId is embedded in the proof file
+        if (proofData.chainId) {
+            const chainEntry = Object.entries(chains).find(([, c]) => c.id === proofData.chainId);
+            if (chainEntry) {
+                chainSelect.value = chainEntry[0];
+                buildClient();
+            }
+        }
+
+        let verification;
+        if (proofData.attestationIndex != null) {
+            // Efficient path: direct attestation lookup by index, skipping CID chain scans
+            const attestation = await getAttestationByIndex(proofData.attestationIndex);
+            const isRevoked = attestation.revokedAt != 0;
+            verification = {
+                resultCode: isRevoked ? [3] : [1],
+                headline: isRevoked ? 'Attestation Revoked' : 'Verified',
+                details: isRevoked
+                    ? [`Revoked at ${prettifyTimestamp(attestation.revokedAt)}`]
+                    : [`Published by ${attestation.authority} at ${prettifyTimestamp(attestation.timestamp)}.`],
+                attestations: [attestation],
+            };
+        } else {
+            verification = await verifyCid(proofData.ipfsCid, proofData.authority);
+        }
         const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
         const codePriority = [2, 3, 0, 4, 1];
         const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];

@@ -582,9 +582,39 @@ proveQuoteButton.addEventListener('click', async function(event) {
 
     const cid = await createRawCIDv1(articleText);
 
+    const selectedChain = getSelectedChain();
+    let chainId;
+    let attestationIndex;
+    proveQuoteStatus.hidden = false;
+    proveQuoteStatus.textContent = 'Checking on-chain attestation…';
+    proveQuoteStatus.style.color = '';
+    try {
+        const readClient = createPublicClient({ chain: selectedChain, transport: http() });
+        const ipfsHash = await hexHashContent(articleText);
+        const index = await readClient.readContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'cidAndAddressToAttestationIndices',
+            args: [ipfsHash, authority],
+        });
+        if (index > 0n) {
+            chainId = selectedChain.id;
+            attestationIndex = Number(index);
+            proveQuoteStatus.hidden = true;
+        } else {
+            proveQuoteStatus.textContent = 'Warning: this article has not been attested on-chain by this authority. The proof file will still download but will not include chain reference fields.';
+            proveQuoteStatus.style.color = 'orange';
+        }
+    } catch (_) {
+        proveQuoteStatus.textContent = 'Warning: could not check on-chain attestation. The proof file will still download without chain reference fields.';
+        proveQuoteStatus.style.color = 'orange';
+    }
+
     const proofJson = {
         ipfsCid: cid,
+        ...(chainId != null && { chainId }),
         authority: authority,
+        ...(attestationIndex != null && { attestationIndex }),
         proof: matchingProofs
     };
 
