@@ -133,18 +133,21 @@ if (stored) {
     }
 }
 
-function startCommitTimer(seconds) {
+function startCommitTimer(seconds, committed = false) {
     let remaining = seconds;
     commitTimer.hidden = false;
-    commitTimer.textContent = `${remaining}s`;
+    commitTimer.classList.toggle('loading', committed);
+    const prefix = committed ? '✓ Committed — reveal in ' : '';
+    commitTimer.textContent = `${prefix}${remaining}s`;
     commitAttestationButton.disabled = true;
 
     const interval = setInterval(() => {
         remaining--;
-        commitTimer.textContent = `${remaining}s`;
+        commitTimer.textContent = `${prefix}${remaining}s`;
         if (remaining <= 0) {
             clearInterval(interval);
             commitTimer.hidden = true;
+            commitTimer.classList.remove('loading');
             commitAttestationButton.disabled = false;
             revealButton.hidden = false;
             localStorage.removeItem('revealAt');
@@ -154,6 +157,10 @@ function startCommitTimer(seconds) {
 
 commitAttestationButton.addEventListener('click', async function(event) {
     event.preventDefault()
+    downloadAttestationRefButton.hidden = true;
+    downloadAttestationRefData = null;
+    revealStatus.hidden = true;
+    revealStatus.classList.remove('success');
     const tree = buildTree(articleInput.value);
 
     if (!walletClient) {
@@ -243,7 +250,7 @@ commitAttestationButton.addEventListener('click', async function(event) {
         localStorage.setItem('pendingCommit', JSON.stringify(pendingCommit));
         localStorage.setItem('revealAt', (Date.now() + 60000).toString());
 
-        startCommitTimer(60);
+        startCommitTimer(60, true);
     } catch (err) {
         commitTimer.hidden = true;
         commitAttestationButton.disabled = false;
@@ -276,6 +283,7 @@ revealButton.addEventListener('click', async function(event) {
     const capturedChain = getSelectedChain();
 
     revealStatus.hidden = false;
+    revealStatus.classList.remove('success');
     revealStatus.textContent = 'Processing...';
     revealButton.disabled = true;
     downloadAttestationRefButton.hidden = true;
@@ -301,8 +309,9 @@ revealButton.addEventListener('click', async function(event) {
         localStorage.removeItem('pendingCommit');
         pendingCommit = null;
         revealButton.hidden = true;
-        revealStatus.hidden = true;
         revealButton.disabled = false;
+        revealStatus.classList.add('success');
+        revealStatus.textContent = '✓ Attestation successful!';
 
         // Fetch attestation index for reference download
         const attestationIndex = await publicClient.readContract({

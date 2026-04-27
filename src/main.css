@@ -354,7 +354,8 @@ form {
   margin-left: 0;
 }
 
-.inputLabel[hidden] {
+.inputLabel[hidden],
+button[hidden] {
   display: none;
 }
 
@@ -503,6 +504,18 @@ button:disabled {
   color: var(--ink-muted);
   font-size: 13px;
   font-family: var(--font-mono);
+}
+
+.commit-timer.loading {
+  color: var(--ink-muted);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.commit-timer.success {
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 /* ==========================================================================
