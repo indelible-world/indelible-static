@@ -463,8 +463,9 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Secondary (outlined) button — used for "Load Delegate" etc. */
-#loadDelegateButton {
+/* Secondary (outlined) button — used for "Load Delegate", download buttons, etc. */
+#loadDelegateButton,
+.btn-secondary {
   background-color: var(--surface);
   color: var(--ink);
   border: 1px solid var(--border);
@@ -473,7 +474,8 @@ button:disabled {
   align-self: flex-start;
 }
 
-#loadDelegateButton:hover {
+#loadDelegateButton:hover,
+.btn-secondary:hover {
   background-color: var(--surface-muted);
   border-color: var(--border-strong);
   color: var(--ink);

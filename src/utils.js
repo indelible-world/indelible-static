@@ -79,3 +79,15 @@ export function decodeCidToIpfsHash(cidStr) {
     const parsed = CID.parse(cidStr, base32);
     return toHex(new Uint8Array(parsed.multihash.digest));
 }
+
+export function downloadJson(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}

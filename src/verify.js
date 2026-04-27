@@ -2,7 +2,7 @@ import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
 import { createPublicClient, http, toHex, fromHex } from 'viem'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import taanqAbi from './assets/contractAbi/taanqAbi.json'
-import { hashContent, createRawCIDv1, getCIDFromHash, getCIDFromRawDigest, buildTree, dnsEncodeName, decodeCidToIpfsHash, prettifyTimestamp } from '/src/utils.js';
+import { hashContent, createRawCIDv1, getCIDFromHash, getCIDFromRawDigest, buildTree, dnsEncodeName, decodeCidToIpfsHash, prettifyTimestamp, downloadJson } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 
@@ -141,11 +141,26 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
             verifyQuoteDetails.appendChild(linkLi);
         }
 
+        // Populate download button for the relevant attestation
+        const quoteRefAtt = verification.attestations[verification.attestations.length - 1];
+        if (allProofsValid && quoteRefAtt && quoteRefAtt.index != null) {
+            downloadQuoteRefData = {
+                ipfsCid: quoteRefAtt.cid,
+                chainId: (chains[chainSelect.value] || sepolia).id,
+                authority: quoteRefAtt.authority,
+                attestationIndex: Number(quoteRefAtt.index),
+            };
+            downloadQuoteRefButton.hidden = false;
+        } else {
+            downloadQuoteRefButton.hidden = true;
+        }
+
         verifyQuoteStatus.hidden = true;
         verifyQuoteResult.hidden = false;
     } catch (err) {
         verifyQuoteStatus.textContent = 'Error: ' + err.message;
         verifyQuoteStatus.style.color = 'red';
+        downloadQuoteRefButton.hidden = true;
         console.error(err);
     } finally {
         verifyQuoteButton.disabled = false;
@@ -196,6 +211,20 @@ const verifyStatus = document.getElementById('verifyStatus');
 const verifyResult = document.getElementById('verifyResult');
 const verifyHeading = document.getElementById('verifyHeading');
 const verifyDetails = document.getElementById('verifyDetails');
+const downloadVerifyRefButton = document.getElementById('downloadVerifyRefButton');
+const downloadQuoteRefButton = document.getElementById('downloadQuoteRefButton');
+let downloadVerifyRefData = null;
+let downloadQuoteRefData = null;
+
+downloadVerifyRefButton.addEventListener('click', function () {
+    if (!downloadVerifyRefData) return;
+    downloadJson(downloadVerifyRefData, 'attestation-reference.json');
+});
+
+downloadQuoteRefButton.addEventListener('click', function () {
+    if (!downloadQuoteRefData) return;
+    downloadJson(downloadQuoteRefData, 'attestation-reference.json');
+});
 
 
 
@@ -228,7 +257,7 @@ async function getAttestationByIndex(index) {
         attestation = 0;
     }
 
-    return await createAttestationFromRPC(attestation);
+    return await createAttestationFromRPC(attestation, index);
 }
 
 async function cidAndAddressToAttestationIndices(ipfsHash, address) {
@@ -247,7 +276,7 @@ async function cidAndAddressToAttestationIndices(ipfsHash, address) {
     return attestationIndex
 }
 
-async function createAttestationFromRPC(rpcResponse) {
+async function createAttestationFromRPC(rpcResponse, index) {
     const cid = getCIDFromRawDigest(fromHex(rpcResponse[0], 'bytes'));
     return new Attestation(
         cid,
@@ -255,18 +284,20 @@ async function createAttestationFromRPC(rpcResponse) {
         rpcResponse[2],
         rpcResponse[3],
         rpcResponse[4],
-        rpcResponse[5]
+        rpcResponse[5],
+        index
     );
 }
 
 class Attestation {
-    constructor(cid, qvHash, parentIpfsHash, authority, timestamp, revokedAt) {
+    constructor(cid, qvHash, parentIpfsHash, authority, timestamp, revokedAt, index) {
         this.cid = cid;
         this.qvHash = qvHash;
         this.parentIpfsHash = parentIpfsHash;
         this.authority = authority;
         this.timestamp = timestamp;
         this.revokedAt = revokedAt;
+        this.index = index;
     }
 }
 class VerificationResult {
@@ -419,6 +450,20 @@ verifyButton.addEventListener('click', async function(event) {
             verifyDetails.appendChild(linkLi);
         }
 
+        // Populate download button for the relevant attestation
+        const refAtt = verification.attestations[verification.attestations.length - 1];
+        if (refAtt && refAtt.index != null) {
+            downloadVerifyRefData = {
+                ipfsCid: refAtt.cid,
+                chainId: (chains[chainSelect.value] || sepolia).id,
+                authority: refAtt.authority,
+                attestationIndex: Number(refAtt.index),
+            };
+            downloadVerifyRefButton.hidden = false;
+        } else {
+            downloadVerifyRefButton.hidden = true;
+        }
+
         verifyResult.hidden = false;
     } catch (err) {
         verifyResult.className = 'result-not-found';
@@ -427,6 +472,7 @@ verifyButton.addEventListener('click', async function(event) {
         const li = document.createElement('li');
         li.textContent = err.message;
         verifyDetails.appendChild(li);
+        downloadVerifyRefButton.hidden = true;
         verifyResult.hidden = false;
         console.error(err);
     } finally {

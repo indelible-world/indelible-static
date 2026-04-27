@@ -1,6 +1,6 @@
 import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
-import { createRawCIDv1, buildTree, dnsEncodeName, hexHashContent, merkleSplit } from '/src/utils.js';
+import { createRawCIDv1, buildTree, dnsEncodeName, hexHashContent, merkleSplit, downloadJson } from '/src/utils.js';
 
 const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
 const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
@@ -34,6 +34,14 @@ articleInput.addEventListener('input', async function(event) {
 });
 
 const commitAttestationButton = document.getElementById('commitAttestation');
+const revealStatus = document.getElementById('revealStatus');
+const downloadAttestationRefButton = document.getElementById('downloadAttestationRefButton');
+let downloadAttestationRefData = null;
+
+downloadAttestationRefButton.addEventListener('click', function () {
+    if (!downloadAttestationRefData) return;
+    downloadJson(downloadAttestationRefData, 'attestation-reference.json');
+});
 
 const wallets = [];
 let selectedWallet = null;
@@ -261,6 +269,17 @@ revealButton.addEventListener('click', async function(event) {
         });
     }
 
+    // Capture data before clearing pendingCommit
+    const capturedCid = cidField.value;
+    const capturedIpfsHash = pendingCommit[2];
+    const capturedAuthority = pendingCommit[5];
+    const capturedChain = getSelectedChain();
+
+    revealStatus.hidden = false;
+    revealStatus.textContent = 'Processing...';
+    revealButton.disabled = true;
+    downloadAttestationRefButton.hidden = true;
+
     try {
         const hash = await walletClient.writeContract({
             address: taanqAddress,
@@ -269,10 +288,40 @@ revealButton.addEventListener('click', async function(event) {
             args: pendingCommit
         });
 
+        const publicClient = createPublicClient({
+            chain: capturedChain,
+            transport: custom(selectedWallet.provider),
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== 'success') {
+            throw new Error('Reveal transaction failed');
+        }
+
         localStorage.removeItem('pendingCommit');
         pendingCommit = null;
         revealButton.hidden = true;
+        revealStatus.hidden = true;
+        revealButton.disabled = false;
+
+        // Fetch attestation index for reference download
+        const attestationIndex = await publicClient.readContract({
+            address: taanqAddress,
+            abi: taanqAbi,
+            functionName: 'cidAndAddressToAttestationIndices',
+            args: [capturedIpfsHash, capturedAuthority],
+        });
+
+        downloadAttestationRefData = {
+            ipfsCid: capturedCid,
+            chainId: capturedChain.id,
+            authority: capturedAuthority,
+            attestationIndex: Number(attestationIndex),
+        };
+        downloadAttestationRefButton.hidden = false;
     } catch (err) {
+        revealStatus.hidden = true;
+        revealButton.disabled = false;
         if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
             alert('Transaction rejected.');
         } else {
