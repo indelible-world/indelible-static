@@ -2,7 +2,7 @@ import { createPublicClient, http, namehash } from 'viem'
 import { normalize } from 'viem/ens'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import ensAbi from './assets/contractAbi/ensAbi.json'
-import { dnsEncodeName, prettifyTimestamp } from '/src/utils.js'
+import { dnsEncodeName, prettifyTimestamp } from 'indelible-protocol'
 
 const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
 

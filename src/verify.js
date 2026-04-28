@@ -1,10 +1,11 @@
-import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
-import { createPublicClient, http, toHex, fromHex } from 'viem'
+import { createPublicClient, http } from 'viem'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
-import taanqAbi from './assets/contractAbi/taanqAbi.json'
-import { hashContent, createRawCIDv1, getCIDFromHash, getCIDFromRawDigest, buildTree, dnsEncodeName, decodeCidToIpfsHash, prettifyTimestamp, downloadJson } from '/src/utils.js';
-
-const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
+import {
+    createRawCIDv1,
+    downloadJson,
+    verifyCid,
+    verifyQuoteProof,
+} from 'indelible-protocol';
 
 const ALCHEMY_KEY = '3Fxk_v1qhXH-B5SjNWXYo'; // Restricted to just indelible contracts (see https://dashboard.alchemy.com/apps/lby6hxqj8ggxggxh/security)
 
@@ -46,6 +47,9 @@ rpcInput.addEventListener('input', () => {
 });
 
 buildClient();
+
+const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
+const codePriority = [2, 3, 0, 4, 1];
 
 // --- Verify Quote ---
 
@@ -89,47 +93,8 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
             }
         }
 
-        let verification;
-        if (proofData.attestationIndex != null) {
-            // Efficient path: direct attestation lookup by index, skipping CID chain scans
-            const attestation = await getAttestationByIndex(proofData.attestationIndex);
-            const isRevoked = attestation.revokedAt != 0;
-            verification = {
-                resultCode: isRevoked ? [3] : [1],
-                headline: isRevoked ? 'Attestation Revoked' : 'Verified',
-                details: isRevoked
-                    ? [`Revoked at ${prettifyTimestamp(attestation.revokedAt)}`]
-                    : [`Published by ${attestation.authority} at ${prettifyTimestamp(attestation.timestamp)}.`],
-                attestations: [attestation],
-            };
-        } else {
-            verification = await verifyCid(proofData.ipfsCid, proofData.authority);
-        }
-        const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
-        const codePriority = [2, 3, 0, 4, 1];
+        const { verification, quoteText, allProofsValid } = await verifyQuoteProof(client, proofData);
         const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];
-
-        // Get the merkle root from the authority attestation (last attestation returned)
-        const attestation = verification.attestations[verification.attestations.length - 1];
-        const merkleRoot = attestation?.qvHash;
-
-        // Verify each proof item and assemble the quote
-        let allProofsValid = true;
-        const sortedProofs = [...proofData.proof].sort((a, b) => Number(a.value[0]) - Number(b.value[0]));
-
-        if (merkleRoot) {
-            for (const item of sortedProofs) {
-                const valid = StandardMerkleTree.verify(merkleRoot, ['string', 'string'], item.value, item.proof);
-                if (!valid) {
-                    allProofsValid = false;
-                    break;
-                }
-            }
-        } else {
-            allProofsValid = false;
-        }
-
-        const quoteText = sortedProofs.map(item => item.value[1]).join('');
 
         verifyQuoteResult.className = allProofsValid ? codeClassMap[primaryCode] : 'result-unverified';
         verifyQuoteHeading.textContent = allProofsValid ? verification.headline : 'Invalid Proof';
@@ -208,7 +173,6 @@ if (urlParams.has('text')) {
 }
 
 articleInput.addEventListener('input', async function (event) {
-    
     if (event.target.value != "") {
         cidField.readOnly = true;
         cidField.value = await createRawCIDv1(event.target.value);
@@ -251,180 +215,6 @@ downloadQuoteRefButton.addEventListener('click', function () {
 });
 
 
-
-async function cidToAttestationIndices(ipfsHash, indexOfAttestationIndex) {
-    let attestationIndex = 0;
-    try {
-        attestationIndex = await client.readContract({
-                address: taanqAddress,
-                abi: taanqAbi,
-                functionName: 'cidToAttestationIndices',
-                args: [ipfsHash, indexOfAttestationIndex],
-            });
-    } catch (ContractFunctionExecutionError) {
-        attestationIndex = 0;
-    }
-
-    return attestationIndex
-}
-
-async function getAttestationByIndex(index) {
-    let attestation = 0;
-    try {
-        attestation = await client.readContract({
-                address: taanqAddress,
-                abi: taanqAbi,
-                functionName: 'attestations',
-                args: [index],
-            });
-    } catch (ContractFunctionExecutionError) {
-        attestation = 0;
-    }
-
-    return await createAttestationFromRPC(attestation, index);
-}
-
-async function cidAndAddressToAttestationIndices(ipfsHash, address) {
-    let attestationIndex = 0;
-    try {
-        attestationIndex = await client.readContract({
-                address: taanqAddress,
-                abi: taanqAbi,
-                functionName: 'cidAndAddressToAttestationIndices',
-                args: [ipfsHash, address],
-            });
-    } catch (ContractFunctionExecutionError) {
-        attestationIndex = 0;
-    }
-
-    return attestationIndex
-}
-
-async function createAttestationFromRPC(rpcResponse, index) {
-    const cid = getCIDFromRawDigest(fromHex(rpcResponse[0], 'bytes'));
-    return new Attestation(
-        cid,
-        rpcResponse[1],
-        rpcResponse[2],
-        rpcResponse[3],
-        rpcResponse[4],
-        rpcResponse[5],
-        index
-    );
-}
-
-class Attestation {
-    constructor(cid, qvHash, parentIpfsHash, authority, timestamp, revokedAt, index) {
-        this.cid = cid;
-        this.qvHash = qvHash;
-        this.parentIpfsHash = parentIpfsHash;
-        this.authority = authority;
-        this.timestamp = timestamp;
-        this.revokedAt = revokedAt;
-        this.index = index;
-    }
-}
-class VerificationResult {
-    constructor(resultCode, headline, details, attestations) {
-        this.resultCode = resultCode;
-        this.headline = headline;
-        this.details = details;
-        this.attestations = attestations;
-    }
-}
-
-async function verifyCid(cid, authority = null) {
-    let resultCode = [];
-    let details = [];
-    const ipfsHash = decodeCidToIpfsHash(cid);
-
-    let firstAttestationIndex = 0;
-
-
-    firstAttestationIndex = await cidToAttestationIndices(ipfsHash, 0);
-    
-
-    if (firstAttestationIndex == 0) {
-        resultCode.push(0);
-        if (authority) {
-            resultCode.push(2);
-        }
-        details.push("This text/CID has not yet been published to the Indelible Protocol.");
-        return new VerificationResult(
-            resultCode,
-            "No Attestation Found",
-            details,
-            []
-        );
-    }
-
-    const firstAttestation = await getAttestationByIndex(firstAttestationIndex);
-    console.log(firstAttestation);
-
-
-    if (authority) {
-        let authorityAttestation = 0;
-        if (firstAttestation.authority.toLowerCase() != authority.toLowerCase()) {
-            const authorityAttestationIndex = await cidAndAddressToAttestationIndices(ipfsHash, authority);
-            if (authorityAttestationIndex == 0) {
-                resultCode.push(2);
-                details.push(`This text/CID has not yet been published to the Indelible Protocol by ${authority}.`);
-                return new VerificationResult(
-                    resultCode,
-                    "Unverified",
-                    details,
-                    [firstAttestation]
-                );
-            }
-            details.push(`It was first published to the Indelible Protocol by ${firstAttestation.authority} at ${prettifyTimestamp(firstAttestation.timestamp)}`);
-            authorityAttestation = await getAttestationByIndex(authorityAttestationIndex);
-        } else {
-            authorityAttestation = firstAttestation;
-        }
-
-        if (authorityAttestation.revokedAt != 0) {
-            resultCode.push(3);
-            details.push(`It was revoked at ${prettifyTimestamp(authorityAttestation.revokedAt)}`);
-            return new VerificationResult(
-                resultCode,
-                "Attestation Revoked",
-                details,
-                [firstAttestation, authorityAttestation]
-            );
-        }
-        resultCode.push(1);
-        details.push(`This text/CID has been published to the Indelible Protocol by ${authorityAttestation.authority} at ${prettifyTimestamp(authorityAttestation.timestamp)}.`);
-        return new VerificationResult(
-            resultCode,
-            "Verified",
-            details,
-            [firstAttestation, authorityAttestation]
-        );
-        
-        
-
-        
-
-        
-    } else {
-        if (firstAttestation.revokedAt != 0) {
-            resultCode.push(3);
-            details.push(`It was revoked at ${prettifyTimestamp(firstAttestation.revokedAt)}`);
-        }
-        const attestationDate = prettifyTimestamp(firstAttestation.timestamp);
-        resultCode.push(1);
-        details.push(`This text/CID has been published to the Indelible Protocol by ${firstAttestation.authority} at ${attestationDate}.`);
-        return new VerificationResult(
-            resultCode,
-            "Attestation Found",
-            details,
-            [firstAttestation]
-        );
-    }
-}
-
-
-
 const verifyButton = document.getElementById('verifyButton');
 verifyButton.addEventListener('click', async function(event) {
     event.preventDefault();
@@ -437,11 +227,8 @@ verifyButton.addEventListener('click', async function(event) {
     verifyStatus.textContent = 'Verifying…';
     verifyButton.disabled = true;
 
-    const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
-    const codePriority = [2, 3, 0, 4, 1];
-
     try {
-        const verification = await verifyCid(cid, authority);
+        const verification = await verifyCid(client, cid, authority || null);
         const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];
         verifyResult.className = codeClassMap[primaryCode] ?? '';
 
@@ -504,5 +291,3 @@ verifyButton.addEventListener('click', async function(event) {
         verifyButton.disabled = false;
     }
 });
-
-

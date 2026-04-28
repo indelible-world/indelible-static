@@ -1,19 +1,19 @@
-import { createWalletClient, createPublicClient, custom, http, encodeFunctionData, parseAbi, keccak256, encodePacked, toHex, pad, namehash } from 'viem';
+import { createWalletClient, createPublicClient, custom, http } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
-import { createRawCIDv1, buildTree, dnsEncodeName, hexHashContent, merkleSplit, downloadJson } from '/src/utils.js';
-
-const taanqAddress = "0x111111a2eb2791b3ee98c5a55972576c54b05b46";
-const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
-
-import taanqAbi from './assets/contractAbi/taanqAbi.json'
-import ensAbi from './assets/contractAbi/ensAbi.json'
-
-const ensRegistryAddress = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
-const ensRegistryAbi = parseAbi(['function owner(bytes32 node) view returns (address)']);
-const ensResolverAbi = parseAbi([
-    'function setText(bytes32 node, string key, string value)'
-]);
-
+import {
+    createRawCIDv1,
+    hexHashContent,
+    downloadJson,
+    commitAttestation as libCommitAttestation,
+    revealAttestation as libRevealAttestation,
+    revokeAttestation as libRevokeAttestation,
+    delegate as libDelegate,
+    revokeDelegation as libRevokeDelegation,
+    proveQuote as libProveQuote,
+    registerEnsBinding as libRegisterEnsBinding,
+    getExistingAttestationIndex,
+    getDelegation,
+} from 'indelible-protocol';
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
@@ -21,16 +21,12 @@ const parentIpfsHashField = document.getElementById('parentIpfsHashInput');
 const authorityField = document.getElementById('authorityInput');
 
 articleInput.addEventListener('input', async function(event) {
-    console.log('Current text:', event.target.value);
     if (event.target.value == "") {
         cidField.value = "";
         return
     }
 
-    const cid = await createRawCIDv1(event.target.value);
-    console.log(cid);
-    cidField.value = cid;
-
+    cidField.value = await createRawCIDv1(event.target.value);
 });
 
 const commitAttestationButton = document.getElementById('commitAttestation');
@@ -67,6 +63,13 @@ function getSelectedChain() {
     return chains[chainSelect.value] || sepolia;
 }
 
+function getPublicClient() {
+    return createPublicClient({
+        chain: getSelectedChain(),
+        transport: custom(selectedWallet.provider),
+    });
+}
+
 async function ensureCorrectChain() {
     const selectedChain = getSelectedChain();
     const currentChainId = await selectedWallet.provider.request({ method: 'eth_chainId' });
@@ -96,19 +99,17 @@ async function connectWallet(walletIndex = 0) {
     return { accounts, walletClient };
 }
 
-function generateSalt() {
-    const salt = crypto.getRandomValues(new Uint8Array(32));
-    return toHex(salt); // bytes32 hex string
-}
-
-function buildSaltedHash(ipfsHash, address, salt) {
-    const addressBytes32 = pad(address, { size: 32, dir: 'right' });
-    return keccak256(
-        encodePacked(
-            ['bytes32', 'bytes32', 'bytes32'],
-            [ipfsHash, addressBytes32, salt]
-        )
-    );
+async function ensureWallet() {
+    if (!walletClient) {
+        await connectWallet();
+    } else {
+        await ensureCorrectChain();
+        walletClient = createWalletClient({
+            account: accounts[0],
+            chain: getSelectedChain(),
+            transport: custom(selectedWallet.provider),
+        });
+    }
 }
 
 let pendingCommit = null;
@@ -161,61 +162,33 @@ commitAttestationButton.addEventListener('click', async function(event) {
     downloadAttestationRefData = null;
     revealStatus.hidden = true;
     revealStatus.classList.remove('success');
-    const tree = buildTree(articleInput.value);
 
-    if (!walletClient) {
-        await connectWallet();
-    } else {
-        await ensureCorrectChain();
-        walletClient = createWalletClient({
-            account: accounts[0],
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
-        });
-    }
+    await ensureWallet();
 
-    const ipfsHash = await hexHashContent(articleInput.value);   // raw SHA-256 digest as bytes32 hex
-    const qvHash = tree.root;          // merkle root
-    const salt = generateSalt();
-    let authority = "";
-    if (authorityField.value != "") {
-        authority = authorityField.value;
-    } else {
-        authority = accounts[0];
-    }
-
-    const saltedHash = buildSaltedHash(ipfsHash, authority, salt);
-
-    const publicClient = createPublicClient({
-        chain: getSelectedChain(),
-        transport: custom(selectedWallet.provider),
-    });
+    const authority = authorityField.value !== "" ? authorityField.value : accounts[0];
+    const publicClient = getPublicClient();
 
     // Check if this authority has already attested this CID
-    const existingIndex = await publicClient.readContract({
-        address: taanqAddress,
-        abi: taanqAbi,
-        functionName: 'cidAndAddressToAttestationIndices',
-        args: [ipfsHash, authority],
-    });
-
-    if (existingIndex > 0n) {
-        const proceed = confirm(
-            'Warning: This authority has already attested this CID. Do you want to proceed anyway?'
-        );
-        if (!proceed) return;
+    try {
+        const ipfsHash = await hexHashContent(articleInput.value);
+        const existingIndex = await getExistingAttestationIndex({
+            publicClient,
+            ipfsHash,
+            authority,
+        });
+        if (existingIndex > 0n) {
+            const proceed = confirm(
+                'Warning: This authority has already attested this CID. Do you want to proceed anyway?'
+            );
+            if (!proceed) return;
+        }
+    } catch (_) {
+        // non-fatal: skip check
     }
 
     // If an authority address was provided, check delegation
     if (authorityField.value !== "" && authority.toLowerCase() !== accounts[0].toLowerCase()) {
-        const delegation = await publicClient.readContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'delegations',
-            args: [authority],
-        });
-
-        const [delegateAddress, timestamp] = delegation;
+        const [delegateAddress, timestamp] = await getDelegation({ publicClient, authority });
         if (delegateAddress.toLowerCase() !== accounts[0].toLowerCase() || timestamp === 0n) {
             alert('Error: You are not delegated to this authority. The authority must delegate to your address first.');
             return;
@@ -227,26 +200,17 @@ commitAttestationButton.addEventListener('click', async function(event) {
     commitAttestationButton.disabled = true;
 
     try {
-        const hash = await walletClient.writeContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'commit',
-            args: [saltedHash]
+        const parentIpfsHash = parentIpfsHashField.value || undefined;
+        const result = await libCommitAttestation({
+            walletClient,
+            publicClient,
+            content: articleInput.value,
+            account: accounts[0],
+            authority,
+            parentIpfsHash,
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== 'success') {
-            throw new Error('Commit transaction failed');
-        }
-
-        let parentIpfsHash = "";
-        if (parentIpfsHashField.value == "") {
-            parentIpfsHash = '0x' + '00'.repeat(32);
-        } else {
-            parentIpfsHash = parentIpfsHashField.value;
-        }
-
-        pendingCommit = [ saltedHash, salt, ipfsHash, qvHash, parentIpfsHash, authority ];
+        pendingCommit = result.pendingCommit;
         localStorage.setItem('pendingCommit', JSON.stringify(pendingCommit));
         localStorage.setItem('revealAt', (Date.now() + 60000).toString());
 
@@ -265,20 +229,10 @@ commitAttestationButton.addEventListener('click', async function(event) {
 
 revealButton.addEventListener('click', async function(event) {
     event.preventDefault()
-    if (!walletClient) {
-        await connectWallet();
-    } else {
-        await ensureCorrectChain();
-        walletClient = createWalletClient({
-            account: accounts[0],
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
-        });
-    }
+    await ensureWallet();
 
     // Capture data before clearing pendingCommit
     const capturedCid = cidField.value;
-    const capturedIpfsHash = pendingCommit[2];
     const capturedAuthority = pendingCommit[5];
     const capturedChain = getSelectedChain();
 
@@ -289,22 +243,13 @@ revealButton.addEventListener('click', async function(event) {
     downloadAttestationRefButton.hidden = true;
 
     try {
-        const hash = await walletClient.writeContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'reveal',
-            args: pendingCommit
+        const publicClient = getPublicClient();
+        const { attestationIndex } = await libRevealAttestation({
+            walletClient,
+            publicClient,
+            pendingCommit,
+            account: accounts[0],
         });
-
-        const publicClient = createPublicClient({
-            chain: capturedChain,
-            transport: custom(selectedWallet.provider),
-        });
-
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== 'success') {
-            throw new Error('Reveal transaction failed');
-        }
 
         localStorage.removeItem('pendingCommit');
         pendingCommit = null;
@@ -312,14 +257,6 @@ revealButton.addEventListener('click', async function(event) {
         revealButton.disabled = false;
         revealStatus.classList.add('success');
         revealStatus.textContent = '✓ Attestation successful!';
-
-        // Fetch attestation index for reference download
-        const attestationIndex = await publicClient.readContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'cidAndAddressToAttestationIndices',
-            args: [capturedIpfsHash, capturedAuthority],
-        });
 
         downloadAttestationRefData = {
             ipfsCid: capturedCid,
@@ -353,39 +290,19 @@ revokeAttestationButton.addEventListener('click', async function(event) {
         return;
     }
 
-    if (!walletClient) {
-        await connectWallet();
-    } else {
-        await ensureCorrectChain();
-        walletClient = createWalletClient({
-            account: accounts[0],
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
-        });
-    }
+    await ensureWallet();
 
     revokeAttestationStatus.hidden = false;
     revokeAttestationStatus.textContent = 'Processing...';
     revokeAttestationButton.disabled = true;
 
     try {
-        const publicClient = createPublicClient({
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
+        await libRevokeAttestation({
+            walletClient,
+            publicClient: getPublicClient(),
+            attestationId,
+            account: accounts[0],
         });
-
-        const hash = await walletClient.writeContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'revokeAttestation',
-            args: [BigInt(attestationId)]
-        });
-
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== 'success') {
-            throw new Error('Revoke transaction failed');
-        }
-
         revokeAttestationStatus.textContent = 'Attestation revoked.';
     } catch (err) {
         revokeAttestationStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
@@ -408,39 +325,19 @@ delegateButton.addEventListener('click', async function(event) {
         return;
     }
 
-    if (!walletClient) {
-        await connectWallet();
-    } else {
-        await ensureCorrectChain();
-        walletClient = createWalletClient({
-            account: accounts[0],
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
-        });
-    }
+    await ensureWallet();
 
     delegateStatus.hidden = false;
     delegateStatus.textContent = 'Processing...';
     delegateButton.disabled = true;
 
     try {
-        const publicClient = createPublicClient({
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
+        await libDelegate({
+            walletClient,
+            publicClient: getPublicClient(),
+            delegateAddress,
+            account: accounts[0],
         });
-
-        const hash = await walletClient.writeContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'delegate',
-            args: [delegateAddress]
-        });
-
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== 'success') {
-            throw new Error('Delegate transaction failed');
-        }
-
         delegateStatus.textContent = 'Delegation successful.';
     } catch (err) {
         delegateStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
@@ -462,19 +359,11 @@ async function loadCurrentDelegate() {
         await ensureCorrectChain();
     }
 
-    const publicClient = createPublicClient({
-        chain: getSelectedChain(),
-        transport: custom(selectedWallet.provider),
+    const [delegateAddress, timestamp] = await getDelegation({
+        publicClient: getPublicClient(),
+        authority: accounts[0],
     });
 
-    const delegation = await publicClient.readContract({
-        address: taanqAddress,
-        abi: taanqAbi,
-        functionName: 'delegations',
-        args: [accounts[0]],
-    });
-
-    const [delegateAddress, timestamp] = delegation;
     if (timestamp === 0n || delegateAddress === '0x0000000000000000000000000000000000000000') {
         currentDelegateDisplay.value = 'No active delegation';
     } else {
@@ -494,39 +383,18 @@ loadDelegateButton.addEventListener('click', async function(event) {
 revokeDelegationButton.addEventListener('click', async function(event) {
     event.preventDefault();
 
-    if (!walletClient) {
-        await connectWallet();
-    } else {
-        await ensureCorrectChain();
-        walletClient = createWalletClient({
-            account: accounts[0],
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
-        });
-    }
+    await ensureWallet();
 
     revokeDelegationStatus.hidden = false;
     revokeDelegationStatus.textContent = 'Processing...';
     revokeDelegationButton.disabled = true;
 
     try {
-        const publicClient = createPublicClient({
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
+        await libRevokeDelegation({
+            walletClient,
+            publicClient: getPublicClient(),
+            account: accounts[0],
         });
-
-        const hash = await walletClient.writeContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'revokeDelegation',
-            args: []
-        });
-
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== 'success') {
-            throw new Error('Revoke delegation transaction failed');
-        }
-
         revokeDelegationStatus.textContent = 'Delegation revoked.';
         currentDelegateDisplay.value = 'No active delegation';
     } catch (err) {
@@ -562,70 +430,49 @@ proveQuoteButton.addEventListener('click', async function(event) {
         return;
     }
 
-    // Find the quote's position in the article text
-    const quoteStart = articleText.indexOf(quote);
-    if (quoteStart === -1) {
-        alert('Quote not found in the article text.');
-        return;
-    }
-    const quoteEnd = quoteStart + quote.length;
-
-    // Determine which chunks (by index) the quote spans
-    const firstChunk = Math.floor(quoteStart / merkleSplit);
-    const lastChunk = Math.floor((quoteEnd - 1) / merkleSplit);
-
-    const tree = buildTree(articleText);
-
-    const matchingProofs = [];
-    for (const [i, v] of tree.entries()) {
-        const chunkIndex = parseInt(v[0], 10);
-        if (chunkIndex >= firstChunk && chunkIndex <= lastChunk) {
-            matchingProofs.push({
-                value: v,
-                proof: tree.getProof(i)
-            });
-        }
-    }
-
-    // Compute CID of the article
-
-    const cid = await createRawCIDv1(articleText);
-
     const selectedChain = getSelectedChain();
-    let chainId;
-    let attestationIndex;
     proveQuoteStatus.hidden = false;
     proveQuoteStatus.textContent = 'Checking on-chain attestation…';
     proveQuoteStatus.style.color = '';
+
+    let proofJson;
+    let onChain = false;
     try {
         const readClient = createPublicClient({ chain: selectedChain, transport: http() });
-        const ipfsHash = await hexHashContent(articleText);
-        const index = await readClient.readContract({
-            address: taanqAddress,
-            abi: taanqAbi,
-            functionName: 'cidAndAddressToAttestationIndices',
-            args: [ipfsHash, authority],
+        const result = await libProveQuote({
+            articleText,
+            quote,
+            authority,
+            publicClient: readClient,
+            chainId: selectedChain.id,
         });
-        if (index > 0n) {
-            chainId = selectedChain.id;
-            attestationIndex = Number(index);
+        proofJson = result.proofJson;
+        onChain = result.onChain;
+    } catch (err) {
+        if (err.message?.includes('Quote not found')) {
+            alert(err.message);
             proveQuoteStatus.hidden = true;
-        } else {
-            proveQuoteStatus.textContent = 'Warning: this article has not been attested on-chain by this authority. The proof file will still download but will not include chain reference fields.';
-            proveQuoteStatus.style.color = 'orange';
+            return;
         }
-    } catch (_) {
+        // Non-fatal: build proof without on-chain reference
+        try {
+            const result = await libProveQuote({ articleText, quote, authority });
+            proofJson = result.proofJson;
+        } catch (innerErr) {
+            alert(innerErr.message);
+            proveQuoteStatus.hidden = true;
+            return;
+        }
         proveQuoteStatus.textContent = 'Warning: could not check on-chain attestation. The proof file will still download without chain reference fields.';
         proveQuoteStatus.style.color = 'orange';
     }
 
-    const proofJson = {
-        ipfsCid: cid,
-        ...(chainId != null && { chainId }),
-        authority: authority,
-        ...(attestationIndex != null && { attestationIndex }),
-        proof: matchingProofs
-    };
+    if (onChain) {
+        proveQuoteStatus.hidden = true;
+    } else if (proveQuoteStatus.style.color !== 'orange') {
+        proveQuoteStatus.textContent = 'Warning: this article has not been attested on-chain by this authority. The proof file will still download but will not include chain reference fields.';
+        proveQuoteStatus.style.color = 'orange';
+    }
 
     // Download as JSON
     const blob = new Blob([JSON.stringify(proofJson, null, 2)], { type: 'application/json' });
@@ -651,109 +498,19 @@ createBindingButton.addEventListener('click', async function(event) {
         return;
     }
 
-    let dnsName;
-    try {
-        dnsName = dnsEncodeName(ensName);
-    } catch (err) {
-        alert('Invalid ENS name: ' + err.message);
-        return;
-    }
-
-    if (!walletClient) {
-        await connectWallet();
-    } else {
-        await ensureCorrectChain();
-        walletClient = createWalletClient({
-            account: accounts[0],
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
-        });
-    }
+    await ensureWallet();
 
     bindingStatus.hidden = false;
-    bindingStatus.textContent = 'Checking indelible-address record...';
+    bindingStatus.textContent = 'Registering ENS binding...';
     createBindingButton.disabled = true;
 
     try {
-        const publicClient = createPublicClient({
-            chain: getSelectedChain(),
-            transport: custom(selectedWallet.provider),
+        await libRegisterEnsBinding({
+            walletClient,
+            publicClient: getPublicClient(),
+            ensName,
+            account: accounts[0],
         });
-
-        const node = namehash(ensName);
-
-        // Look up the resolver for this ENS name
-        const resolverAddr = await publicClient.getEnsResolver({ name: ensName });
-        if (!resolverAddr) {
-            throw new Error('No resolver set for this ENS name. Please configure a resolver first.');
-        }
-
-        // Check if this name already has an active binding to the current user
-        const existingBinding = await publicClient.readContract({
-            address: ensAddress,
-            abi: ensAbi,
-            functionName: 'resolveIndelibleAddress',
-            args: [node]
-        });
-
-        if (existingBinding && existingBinding.toLowerCase() === accounts[0].toLowerCase()) {
-            throw new Error('This ENS name is already bound to your address.');
-        }
-
-        // Check if indelible-address text record is set
-        const indelibleAddr = await publicClient.getEnsText({ name: ensName, key: 'indelible-address' });
-
-        if (!indelibleAddr) {
-            // Verify the user owns this ENS name before writing records
-            const owner = await publicClient.readContract({
-                address: ensRegistryAddress,
-                abi: ensRegistryAbi,
-                functionName: 'owner',
-                args: [node]
-            });
-
-            if (!owner || owner.toLowerCase() !== accounts[0].toLowerCase()) {
-                throw new Error('You do not own this ENS name. Only the owner can set the indelible-address record.');
-            }
-
-            const shouldSet = confirm(
-                'The "indelible-address" text record is not set on your ENS resolver. ' +
-                'This is required for the binding to work.\n\n' +
-                'Would you like to set it to your current wallet address?\n' +
-                accounts[0]
-            );
-            if (!shouldSet) {
-                bindingStatus.textContent = 'Cancelled — indelible-address record required.';
-                return;
-            }
-
-            bindingStatus.textContent = 'Setting indelible-address record...';
-            const setTextHash = await walletClient.writeContract({
-                address: resolverAddr,
-                abi: ensResolverAbi,
-                functionName: 'setText',
-                args: [node, 'indelible-address', accounts[0]]
-            });
-
-            const setTextReceipt = await publicClient.waitForTransactionReceipt({ hash: setTextHash });
-            if (setTextReceipt.status !== 'success') {
-                throw new Error('Failed to set indelible-address text record');
-            }
-        }
-
-        bindingStatus.textContent = 'Registering ENS binding...';
-        const hash = await walletClient.writeContract({
-            address: ensAddress,
-            abi: ensAbi,
-            functionName: 'registerEnsBinding',
-            args: [dnsName]
-        });
-
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        if (receipt.status !== 'success') {
-            throw new Error('ENS binding transaction failed');
-        }
-
         bindingStatus.textContent = 'ENS binding registered.';
     } catch (err) {
         bindingStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
