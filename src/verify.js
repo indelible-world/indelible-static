@@ -5,7 +5,7 @@ import {
     downloadJson,
     verifyCid,
     verifyQuoteProof,
-} from 'indelible-protocol';
+} from 'indelible';
 
 const ALCHEMY_KEY = '3Fxk_v1qhXH-B5SjNWXYo'; // Restricted to just indelible contracts (see https://dashboard.alchemy.com/apps/lby6hxqj8ggxggxh/security)
 

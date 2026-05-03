@@ -13,7 +13,7 @@ import {
     registerEnsBinding as libRegisterEnsBinding,
     getExistingAttestationIndex,
     getDelegation,
-} from 'indelible-protocol';
+} from 'indelible';
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
