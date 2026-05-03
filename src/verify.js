@@ -1,4 +1,4 @@
-import { createPublicClient, http } from 'viem'
+import { createPublicClient, http, fallback } from 'viem'
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import {
     createRawCIDv1,
@@ -23,6 +23,14 @@ const defaultRpcUrls = {
     sepolia: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`,
 };
 
+// Public CORS-permissive fallbacks for when Alchemy is blocked (e.g. IPFS gateways)
+const publicRpcUrls = {
+    ethereum: 'https://cloudflare-eth.com',
+    arbitrum: 'https://arb1.arbitrum.io/rpc',
+    base: 'https://mainnet.base.org',
+    sepolia: 'https://rpc.ankr.com/eth_sepolia',
+};
+
 const chainSelect = document.getElementById('chainSelect');
 const rpcInput = document.getElementById('rpcInput');
 
@@ -31,12 +39,16 @@ let client;
 function buildClient() {
     const chainKey = chainSelect.value;
     const chain = chains[chainKey] || sepolia;
-    const rpcUrl = rpcInput.value.trim() || defaultRpcUrls[chainKey] || defaultRpcUrls.sepolia;
+    const customUrl = rpcInput.value.trim();
 
-    client = createPublicClient({
-        chain,
-        transport: http(rpcUrl),
-    });
+    const transport = customUrl
+        ? http(customUrl)
+        : fallback([
+            http(defaultRpcUrls[chainKey] || defaultRpcUrls.sepolia),
+            http(publicRpcUrls[chainKey] || publicRpcUrls.sepolia),
+          ]);
+
+    client = createPublicClient({ chain, transport });
 }
 
 let debounceTimer;
