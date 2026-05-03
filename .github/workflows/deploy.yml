@@ -49,3 +49,42 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Upload to IPFS via Pinata
+        id: ipfs
+        env:
+          PINATA_JWT: ${{ secrets.PINATA_JWT }}
+        run: |
+          node --input-type=module << 'EOF'
+          import { readFileSync, readdirSync, statSync } from 'fs';
+          import { join, relative } from 'path';
+          import { appendFileSync } from 'fs';
+
+          function collectFiles(dir) {
+            const results = [];
+            for (const entry of readdirSync(dir)) {
+              const full = join(dir, entry);
+              if (statSync(full).isDirectory()) results.push(...collectFiles(full));
+              else results.push(full);
+            }
+            return results;
+          }
+
+          const files = collectFiles('./dist');
+          const form = new FormData();
+          for (const file of files) {
+            const rel = relative('./dist', file);
+            form.append('file', new Blob([readFileSync(file)]), rel);
+          }
+          form.append('network', 'public');
+
+          const res = await fetch('https://uploads.pinata.cloud/v3/files', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${process.env.PINATA_JWT}` },
+            body: form,
+          });
+          const json = await res.json();
+          const cid = json?.data?.cid;
+          if (!cid) throw new Error(JSON.stringify(json));
+          console.log(`Pinned to IPFS: ipfs://${cid}`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `cid=${cid}\n`);
+          EOF
