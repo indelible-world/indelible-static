@@ -39,23 +39,13 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          # Upload dist folder
-          path: './dist'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
       - name: Upload to IPFS via Pinata
         id: ipfs
         env:
           PINATA_JWT: ${{ secrets.PINATA_JWT }}
         run: |
           node --input-type=module << 'EOF'
-          import { readFileSync, readdirSync, statSync } from 'fs';
+          import { readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
           import { join, relative } from 'path';
           import { appendFileSync } from 'fs';
 
@@ -86,5 +76,16 @@ jobs:
           const cid = json?.data?.cid;
           if (!cid) throw new Error(JSON.stringify(json));
           console.log(`Pinned to IPFS: ipfs://${cid}`);
+          writeFileSync('./dist/ipfs.json', JSON.stringify({ cid, url: `ipfs://${cid}` }));
           appendFileSync(process.env.GITHUB_OUTPUT, `cid=${cid}\n`);
           EOF
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          # Upload dist folder
+          path: './dist'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

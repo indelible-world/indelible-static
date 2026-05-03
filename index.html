@@ -96,5 +96,21 @@
     <script type="module" src="/src/tabs.js"></script>
     <script type="module" src="/src/verify.js"></script>
     <script type="module" src="/src/authority-explorer.js"></script>
+
+    <footer id="ipfs-footer" style="text-align:center;padding:1rem;font-size:0.8rem;opacity:0.6;">
+        IPFS: <a id="ipfs-link" href="#">loading&hellip;</a>
+    </footer>
+    <script type="module">
+        fetch('/ipfs.json')
+            .then(r => r.json())
+            .then(({ cid, url }) => {
+                const link = document.getElementById('ipfs-link');
+                link.textContent = url;
+                link.href = `https://ipfs.io/ipfs/${cid}`;
+            })
+            .catch(() => {
+                document.getElementById('ipfs-link').textContent = 'unavailable';
+            });
+    </script>
 </body>
 </html>
