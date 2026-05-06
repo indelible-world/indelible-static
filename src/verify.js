@@ -1,35 +1,12 @@
-import { createPublicClient, http, fallback } from 'viem'
-import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
 import {
     createRawCIDv1,
     downloadJson,
     verifyCid,
     verifyQuoteProof,
+    CHAINS,
+    createIndelibleClient,
+    getChainKeyById,
 } from 'indelible';
-
-const ALCHEMY_KEY = '3Fxk_v1qhXH-B5SjNWXYo'; // Restricted to just indelible contracts (see https://dashboard.alchemy.com/apps/lby6hxqj8ggxggxh/security)
-
-const chains = {
-    ethereum: mainnet,
-    arbitrum: arbitrum,
-    base: base,
-    sepolia: sepolia,
-};
-
-const defaultRpcUrls = {
-    ethereum: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    arbitrum: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    base: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    sepolia: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-};
-
-// Public CORS-permissive fallbacks for when Alchemy is blocked (e.g. IPFS gateways)
-const publicRpcUrls = {
-    ethereum: 'https://cloudflare-eth.com',
-    arbitrum: 'https://arb1.arbitrum.io/rpc',
-    base: 'https://mainnet.base.org',
-    sepolia: 'https://rpc.ankr.com/eth_sepolia',
-};
 
 const chainSelect = document.getElementById('chainSelect');
 const rpcInput = document.getElementById('rpcInput');
@@ -37,18 +14,7 @@ const rpcInput = document.getElementById('rpcInput');
 let client;
 
 function buildClient() {
-    const chainKey = chainSelect.value;
-    const chain = chains[chainKey] || sepolia;
-    const customUrl = rpcInput.value.trim();
-
-    const transport = customUrl
-        ? http(customUrl)
-        : fallback([
-            http(defaultRpcUrls[chainKey] || defaultRpcUrls.sepolia),
-            http(publicRpcUrls[chainKey] || publicRpcUrls.sepolia),
-          ]);
-
-    client = createPublicClient({ chain, transport });
+    client = createIndelibleClient(chainSelect.value, rpcInput.value);
 }
 
 let debounceTimer;
@@ -59,9 +25,6 @@ rpcInput.addEventListener('input', () => {
 });
 
 buildClient();
-
-const codeClassMap = { 0: 'result-not-found', 1: 'result-verified', 2: 'result-unverified', 3: 'result-revoked', 4: 'result-warning' };
-const codePriority = [2, 3, 0, 4, 1];
 
 // --- Verify Quote ---
 
@@ -98,17 +61,16 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
 
         // Auto-switch chain if chainId is embedded in the proof file
         if (proofData.chainId) {
-            const chainEntry = Object.entries(chains).find(([, c]) => c.id === proofData.chainId);
-            if (chainEntry) {
-                chainSelect.value = chainEntry[0];
+            const chainKey = getChainKeyById(proofData.chainId);
+            if (chainKey) {
+                chainSelect.value = chainKey;
                 buildClient();
             }
         }
 
         const { verification, quoteText, allProofsValid } = await verifyQuoteProof(client, proofData);
-        const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];
 
-        verifyQuoteResult.className = allProofsValid ? codeClassMap[primaryCode] : 'result-unverified';
+        verifyQuoteResult.className = allProofsValid ? (verification.cssClass ?? '') : 'result-unverified';
         verifyQuoteHeading.textContent = allProofsValid ? verification.headline : 'Invalid Proof';
         verifyQuoteText.textContent = quoteText;
 
@@ -147,7 +109,7 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
         if (allProofsValid && quoteRefAtt && quoteRefAtt.index != null) {
             downloadQuoteRefData = {
                 ipfsCid: quoteRefAtt.cid,
-                chainId: (chains[chainSelect.value] || sepolia).id,
+                chainId: (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id,
                 authority: quoteRefAtt.authority,
                 attestationIndex: Number(quoteRefAtt.index),
             };
@@ -241,8 +203,7 @@ verifyButton.addEventListener('click', async function(event) {
 
     try {
         const verification = await verifyCid(client, cid, authority || null);
-        const primaryCode = codePriority.find(c => verification.resultCode.includes(c)) ?? verification.resultCode[verification.resultCode.length - 1];
-        verifyResult.className = codeClassMap[primaryCode] ?? '';
+        verifyResult.className = verification.cssClass ?? '';
 
         verifyHeading.textContent = verification.headline;
 
@@ -278,7 +239,7 @@ verifyButton.addEventListener('click', async function(event) {
         if (refAtt && refAtt.index != null) {
             downloadVerifyRefData = {
                 ipfsCid: refAtt.cid,
-                chainId: (chains[chainSelect.value] || sepolia).id,
+                chainId: (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id,
                 authority: refAtt.authority,
                 attestationIndex: Number(refAtt.index),
             };
