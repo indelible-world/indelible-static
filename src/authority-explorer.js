@@ -1,34 +1,5 @@
-import { createPublicClient, http, fallback, namehash } from 'viem'
-import { normalize } from 'viem/ens'
-import { mainnet, arbitrum, base, sepolia } from 'viem/chains'
-import ensAbi from './assets/contractAbi/ensAbi.json'
-import { dnsEncodeName, prettifyTimestamp } from 'indelible'
-
-const ensAddress = "0x1111113661d1fbd85b6d131beb199063582c2be7";
-
-const ALCHEMY_KEY = '3Fxk_v1qhXH-B5SjNWXYo';
-
-const chains = {
-    ethereum: mainnet,
-    arbitrum: arbitrum,
-    base: base,
-    sepolia: sepolia,
-};
-
-const defaultRpcUrls = {
-    ethereum: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    arbitrum: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    base: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    sepolia: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-};
-
-// Public CORS-permissive fallbacks for when Alchemy is blocked (e.g. IPFS gateways)
-const publicRpcUrls = {
-    ethereum: 'https://cloudflare-eth.com',
-    arbitrum: 'https://arb1.arbitrum.io/rpc',
-    base: 'https://mainnet.base.org',
-    sepolia: 'https://rpc.ankr.com/eth_sepolia',
-};
+import { createPublicClient, http, fallback } from 'viem'
+import { ens, CHAINS, DEFAULT_RPC_URLS, PUBLIC_RPC_URLS, prettifyTimestamp } from 'indelible'
 
 const chainSelect = document.getElementById('chainSelect');
 const rpcInput = document.getElementById('rpcInput');
@@ -37,14 +8,14 @@ let client;
 
 function buildClient() {
     const chainKey = chainSelect.value;
-    const chain = chains[chainKey] || sepolia;
+    const chain = CHAINS[chainKey] || CHAINS.sepolia;
     const customUrl = rpcInput?.value.trim();
 
     const transport = customUrl
         ? http(customUrl)
         : fallback([
-            http(defaultRpcUrls[chainKey] || defaultRpcUrls.sepolia),
-            http(publicRpcUrls[chainKey] || publicRpcUrls.sepolia),
+            http(DEFAULT_RPC_URLS[chainKey] || DEFAULT_RPC_URLS.sepolia),
+            http(PUBLIC_RPC_URLS[chainKey] || PUBLIC_RPC_URLS.sepolia),
           ]);
 
     client = createPublicClient({ chain, transport });
@@ -93,92 +64,7 @@ if ((urlParams.has('authority') || urlParams.has('ens')) && !location.hash) {
     if (tabLink) tabLink.click();
 }
 
-// --- Contract helpers ---
-
-async function getVerification(index) {
-    try {
-        const result = await client.readContract({
-            address: ensAddress,
-            abi: ensAbi,
-            functionName: 'verifications',
-            args: [index],
-        });
-        return {
-            authority: result[0],
-            node: result[1],
-            dnsName: result[2],
-            startTimestamp: Number(result[3]),
-            endTimestamp: Number(result[4]),
-        };
-    } catch {
-        return null;
-    }
-}
-
-async function getAddrToBindings(address, index) {
-    try {
-        const result = await client.readContract({
-            address: ensAddress,
-            abi: ensAbi,
-            functionName: 'addrToBindings',
-            args: [address, index],
-        });
-        return Number(result);
-    } catch {
-        return 0;
-    }
-}
-
-async function getNodeToBinding(node) {
-    try {
-        const result = await client.readContract({
-            address: ensAddress,
-            abi: ensAbi,
-            functionName: 'nodeToBinding',
-            args: [node],
-        });
-        return Number(result);
-    } catch {
-        return 0;
-    }
-}
-
-async function resolveIndelibleAddress(node) {
-    try {
-        const result = await client.readContract({
-            address: ensAddress,
-            abi: ensAbi,
-            functionName: 'resolveIndelibleAddress',
-            args: [node],
-        });
-        return result;
-    } catch {
-        return null;
-    }
-}
-
-// --- Decode dnsName bytes to readable name ---
-function decodeDnsName(hexOrBytes) {
-    let bytes;
-    if (typeof hexOrBytes === 'string' && hexOrBytes.startsWith('0x')) {
-        bytes = new Uint8Array(hexOrBytes.slice(2).match(/.{2}/g).map(b => parseInt(b, 16)));
-    } else if (hexOrBytes instanceof Uint8Array) {
-        bytes = hexOrBytes;
-    } else {
-        return '(unknown)';
-    }
-    const labels = [];
-    let i = 0;
-    while (i < bytes.length) {
-        const len = bytes[i];
-        if (len === 0) break;
-        i++;
-        const label = new TextDecoder().decode(bytes.slice(i, i + len));
-        labels.push(label);
-        i += len;
-    }
-    return labels.join('.') || '(unknown)';
-}
+// --- Contract helpers delegated to indelible.ens ---
 
 function isAddress(input) {
     return /^0x[0-9a-fA-F]{40}$/.test(input);
@@ -206,10 +92,6 @@ function getTimestampFilter() {
     return parsed;
 }
 
-function isBindingActiveAtTimestamp(verification, timestamp) {
-    return verification.startTimestamp <= timestamp &&
-        (verification.endTimestamp === 0 || verification.endTimestamp > timestamp);
-}
 
 function makeAddressLink(address) {
     const a = document.createElement('a');
@@ -258,7 +140,7 @@ function renderBindingCard(verification, showRevoked, timestamp) {
     const hasTimestampFilter = timestamp !== null;
     const now = Math.floor(Date.now() / 1000);
     const ts = hasTimestampFilter ? timestamp : now;
-    const isActive = isBindingActiveAtTimestamp(verification, ts);
+    const isActive = verification.isActiveAt(ts);
     const isRevoked = verification.endTimestamp !== 0 && verification.endTimestamp <= ts;
 
     if (hasTimestampFilter && !isActive) return null;
@@ -267,7 +149,7 @@ function renderBindingCard(verification, showRevoked, timestamp) {
     const card = document.createElement('div');
     card.className = 'binding-card' + (isRevoked ? ' binding-revoked' : ' binding-active');
 
-    const ensName = decodeDnsName(verification.dnsName);
+    const ensName = verification.name;
 
     const header = document.createElement('div');
     header.className = 'binding-header';
@@ -355,15 +237,7 @@ async function performLookup() {
 }
 
 async function lookupByAddress(address, showRevoked, timestamp) {
-    const bindings = [];
-    let i = 0;
-    while (true) {
-        const bindingIndex = await getAddrToBindings(address, i);
-        if (bindingIndex === 0) break;
-        const verification = await getVerification(bindingIndex);
-        if (verification) bindings.push(verification);
-        i++;
-    }
+    const bindings = await ens.getBindingsByAddress(client, address);
 
     explorerHeading.textContent = 'ENS Bindings for Address';
     explorerMeta.innerHTML = '';
@@ -407,14 +281,8 @@ async function lookupByAddress(address, showRevoked, timestamp) {
 }
 
 async function lookupByEns(ensName, showRevoked, timestamp) {
-    let normalizedName;
-    try {
-        normalizedName = normalize(ensName);
-    } catch {
-        normalizedName = ensName;
-    }
-    const node = namehash(normalizedName);
-    const bindingIndex = await getNodeToBinding(node);
+    const verification = await ens.getBindingByName(client, ensName);
+    const normalizedName = verification ? verification.name : ensName.trim().toLowerCase();
 
     explorerHeading.textContent = 'ENS Binding: ' + normalizedName;
     explorerMeta.innerHTML = '';
@@ -429,20 +297,14 @@ async function lookupByEns(ensName, showRevoked, timestamp) {
 
     explorerBindings.innerHTML = '';
 
-    if (bindingIndex === 0) {
+    if (!verification) {
         explorerBindings.innerHTML = '<p class="no-results">No Indelible ENS binding found for this name.</p>';
         return;
     }
 
-    const verification = await getVerification(bindingIndex);
-    if (!verification) {
-        explorerBindings.innerHTML = '<p class="no-results">Could not retrieve binding details.</p>';
-        return;
-    }
-
     // Also resolve the indelible address for this node
-    const indelibleAddr = await resolveIndelibleAddress(node);
-    if (indelibleAddr && indelibleAddr !== '0x0000000000000000000000000000000000000000') {
+    const indelibleAddr = await ens.resolveIndelibleAddress(client, verification.node);
+    if (indelibleAddr) {
         const addrNote = document.createElement('div');
         addrNote.className = 'explorer-ts-note';
         addrNote.appendChild(document.createTextNode('Indelible Address: '));
