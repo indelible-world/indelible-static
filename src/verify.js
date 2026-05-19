@@ -6,6 +6,7 @@ import {
     CHAINS,
     createIndelibleClient,
     getChainKeyById,
+    attestationToRef,
 } from 'indelible';
 
 const chainSelect = document.getElementById('chainSelect');
@@ -107,12 +108,7 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
         // Populate download button for the relevant attestation
         const quoteRefAtt = verification.attestations[verification.attestations.length - 1];
         if (allProofsValid && quoteRefAtt && quoteRefAtt.index != null) {
-            downloadQuoteRefData = {
-                ipfsCid: quoteRefAtt.cid,
-                chainId: (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id,
-                authority: quoteRefAtt.authority,
-                attestationIndex: Number(quoteRefAtt.index),
-            };
+            downloadQuoteRefData = attestationToRef(quoteRefAtt, (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id);
             downloadQuoteRefButton.hidden = false;
         } else {
             downloadQuoteRefButton.hidden = true;
@@ -237,12 +233,7 @@ verifyButton.addEventListener('click', async function(event) {
         // Populate download button for the relevant attestation
         const refAtt = verification.attestations[verification.attestations.length - 1];
         if (refAtt && refAtt.index != null) {
-            downloadVerifyRefData = {
-                ipfsCid: refAtt.cid,
-                chainId: (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id,
-                authority: refAtt.authority,
-                attestationIndex: Number(refAtt.index),
-            };
+            downloadVerifyRefData = attestationToRef(refAtt, (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id);
             downloadVerifyRefButton.hidden = false;
         } else {
             downloadVerifyRefButton.hidden = true;
