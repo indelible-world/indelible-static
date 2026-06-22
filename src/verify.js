@@ -1,3 +1,4 @@
+import { fromHex } from 'viem';
 import {
     createRawCIDv1,
     downloadJson,
@@ -7,6 +8,7 @@ import {
     createIndelibleClient,
     getChainKeyById,
     attestationToRef,
+    getCIDFromRawDigest,
 } from 'indelible';
 
 const chainSelect = document.getElementById('chainSelect');
@@ -103,6 +105,24 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
                 }
             }
             verifyQuoteDetails.appendChild(linkLi);
+        }
+
+        // Show child hash link if the last attestation has a childIpfsHash
+        if (allProofsValid) {
+            const lastQuoteAtt = verification.attestations[verification.attestations.length - 1];
+            const zeroHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+            if (lastQuoteAtt && lastQuoteAtt.childIpfsHash && lastQuoteAtt.childIpfsHash !== zeroHash) {
+                const childCid = getCIDFromRawDigest(fromHex(lastQuoteAtt.childIpfsHash, 'bytes'));
+                const childLi = document.createElement('li');
+                childLi.style.marginTop = '8px';
+                const childLink = document.createElement('a');
+                childLink.className = 'authority-link';
+                const childParams = new URLSearchParams({ cid: childCid });
+                childLink.href = `${window.location.pathname}?${childParams.toString()}`;
+                childLink.textContent = `View updated version (child attestation) →`;
+                childLi.appendChild(childLink);
+                verifyQuoteDetails.appendChild(childLi);
+            }
         }
 
         // Populate download button for the relevant attestation
@@ -228,6 +248,22 @@ verifyButton.addEventListener('click', async function(event) {
                 }
             }
             verifyDetails.appendChild(linkLi);
+        }
+
+        // Show child hash link if the last attestation has a childIpfsHash
+        const lastAtt = verification.attestations[verification.attestations.length - 1];
+        const zeroHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        if (lastAtt && lastAtt.childIpfsHash && lastAtt.childIpfsHash !== zeroHash) {
+            const childCid = getCIDFromRawDigest(fromHex(lastAtt.childIpfsHash, 'bytes'));
+            const childLi = document.createElement('li');
+            childLi.style.marginTop = '8px';
+            const childLink = document.createElement('a');
+            childLink.className = 'authority-link';
+            const childParams = new URLSearchParams({ cid: childCid });
+            childLink.href = `${window.location.pathname}?${childParams.toString()}`;
+            childLink.textContent = `View updated version (child attestation) →`;
+            childLi.appendChild(childLink);
+            verifyDetails.appendChild(childLi);
         }
 
         // Populate download button for the relevant attestation
