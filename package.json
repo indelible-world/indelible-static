@@ -16,7 +16,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@openzeppelin/merkle-tree": "^1.0.8",
-    "indelible": "^0.2.7",
+    "indelible": "^0.3.0",
     "multiformats": "^13.4.2",
     "viem": "^2.47.12"
   }
