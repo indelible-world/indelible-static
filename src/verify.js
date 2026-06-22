@@ -291,3 +291,7 @@ verifyButton.addEventListener('click', async function(event) {
         verifyButton.disabled = false;
     }
 });
+// Auto-verify if cid or text is supplied via URL params
+if (urlParams.has('cid') || urlParams.has('text')) {
+    verifyButton.click();
+}
