@@ -32,6 +32,7 @@
         <nav class="topnav subnav" id="subnav-attestations">
             <a class="active" href="#attestations-attest">Attest</a>
             <a href="#attestations-revoke">Revoke</a>
+            <a href="#attestations-set-child">Set Child</a>
             <a href="#attestations-prove-quote">Prove Quote</a>
         </nav>
         <nav class="topnav subnav" id="subnav-delegations">
@@ -70,6 +71,19 @@
             <div class="commit-actions">
                 <button type="submit" class="inputLabel" id="revokeAttestationButton">Revoke Attestation</button>
                 <span id="revokeAttestationStatus" class="commit-timer" hidden></span>
+            </div>
+        </form>
+    </section>
+
+    <section id="attestations-set-child" class="sections">
+        <form>
+            <label class="inputLabel" for="setChildAttestationIdInput">Attestation ID</label>
+            <div><input type="text" class="input cid" id="setChildAttestationIdInput" placeholder="e.g. 1"></div>
+            <label class="inputLabel" for="setChildIpfsHashInput">Child IPFS CID</label>
+            <div><input type="text" class="input cid" id="setChildIpfsHashInput" placeholder="bafkrei..."></div>
+            <div class="commit-actions">
+                <button type="submit" class="inputLabel" id="setChildIpfsHashButton">Set Child IPFS Hash</button>
+                <span id="setChildIpfsHashStatus" class="commit-timer" hidden></span>
             </div>
         </form>
     </section>

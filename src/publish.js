@@ -3,10 +3,12 @@ import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
 import {
     createRawCIDv1,
     hexHashContent,
+    decodeCidToIpfsHash,
     downloadJson,
     commitAttestation as libCommitAttestation,
     revealAttestation as libRevealAttestation,
     revokeAttestation as libRevokeAttestation,
+    setChildIpfsHash as libSetChildIpfsHash,
     delegate as libDelegate,
     revokeDelegation as libRevokeDelegation,
     proveQuote as libProveQuote,
@@ -308,6 +310,56 @@ revokeAttestationButton.addEventListener('click', async function(event) {
         revokeAttestationStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
     } finally {
         revokeAttestationButton.disabled = false;
+    }
+});
+
+// --- Set Child IPFS Hash ---
+const setChildIpfsHashButton = document.getElementById('setChildIpfsHashButton');
+const setChildAttestationIdInput = document.getElementById('setChildAttestationIdInput');
+const setChildIpfsHashInput = document.getElementById('setChildIpfsHashInput');
+const setChildIpfsHashStatus = document.getElementById('setChildIpfsHashStatus');
+
+setChildIpfsHashButton.addEventListener('click', async function(event) {
+    event.preventDefault();
+
+    const attestationId = setChildAttestationIdInput.value.trim();
+    const childCid = setChildIpfsHashInput.value.trim();
+    if (!attestationId) {
+        alert('Please enter an attestation ID.');
+        return;
+    }
+    if (!childCid) {
+        alert('Please enter a child IPFS CID.');
+        return;
+    }
+
+    await ensureWallet();
+
+    let childIpfsHash;
+    try {
+        childIpfsHash = decodeCidToIpfsHash(childCid);
+    } catch (err) {
+        alert('Invalid IPFS CID: ' + err.message);
+        return;
+    }
+
+    setChildIpfsHashStatus.hidden = false;
+    setChildIpfsHashStatus.textContent = 'Processing...';
+    setChildIpfsHashButton.disabled = true;
+
+    try {
+        await libSetChildIpfsHash({
+            walletClient,
+            publicClient: getPublicClient(),
+            attestationId,
+            childIpfsHash,
+            account: accounts[0],
+        });
+        setChildIpfsHashStatus.textContent = 'Child IPFS hash set.';
+    } catch (err) {
+        setChildIpfsHashStatus.textContent = 'Error: ' + (err.shortMessage || err.message);
+    } finally {
+        setChildIpfsHashButton.disabled = false;
     }
 });
 
