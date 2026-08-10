@@ -16,6 +16,7 @@ import {
     getExistingAttestationIndex,
     getDelegation,
 } from 'indelible';
+import { constrainChainSelectToEns } from './ens-chain.js';
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
@@ -60,6 +61,8 @@ const chains = {
     base: base,
     sepolia: sepolia
 };
+
+constrainChainSelectToEns(chainSelect, ['ens']);
 
 function getSelectedChain() {
     return chains[chainSelect.value] || arbitrum;
