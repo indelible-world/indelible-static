@@ -128,7 +128,7 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
         // Populate download button for the relevant attestation
         const quoteRefAtt = verification.attestations[verification.attestations.length - 1];
         if (allProofsValid && quoteRefAtt && quoteRefAtt.index != null) {
-            downloadQuoteRefData = attestationToRef(quoteRefAtt, (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id);
+            downloadQuoteRefData = attestationToRef(quoteRefAtt, (CHAINS[chainSelect.value] ?? CHAINS.arbitrum).id);
             downloadQuoteRefButton.hidden = false;
         } else {
             downloadQuoteRefButton.hidden = true;
@@ -269,7 +269,7 @@ verifyButton.addEventListener('click', async function(event) {
         // Populate download button for the relevant attestation
         const refAtt = verification.attestations[verification.attestations.length - 1];
         if (refAtt && refAtt.index != null) {
-            downloadVerifyRefData = attestationToRef(refAtt, (CHAINS[chainSelect.value] ?? CHAINS.sepolia).id);
+            downloadVerifyRefData = attestationToRef(refAtt, (CHAINS[chainSelect.value] ?? CHAINS.arbitrum).id);
             downloadVerifyRefButton.hidden = false;
         } else {
             downloadVerifyRefButton.hidden = true;

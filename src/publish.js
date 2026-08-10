@@ -62,7 +62,7 @@ const chains = {
 };
 
 function getSelectedChain() {
-    return chains[chainSelect.value] || sepolia;
+    return chains[chainSelect.value] || arbitrum;
 }
 
 function getPublicClient() {

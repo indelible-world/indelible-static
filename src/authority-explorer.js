@@ -8,14 +8,14 @@ let client;
 
 function buildClient() {
     const chainKey = chainSelect.value;
-    const chain = CHAINS[chainKey] || CHAINS.sepolia;
+    const chain = CHAINS[chainKey] || CHAINS.arbitrum;
     const customUrl = rpcInput?.value.trim();
 
     const transport = customUrl
         ? http(customUrl)
         : fallback([
-            http(DEFAULT_RPC_URLS[chainKey] || DEFAULT_RPC_URLS.sepolia),
-            http(PUBLIC_RPC_URLS[chainKey] || PUBLIC_RPC_URLS.sepolia),
+            http(DEFAULT_RPC_URLS[chainKey] || DEFAULT_RPC_URLS.arbitrum),
+            http(PUBLIC_RPC_URLS[chainKey] || PUBLIC_RPC_URLS.arbitrum),
           ]);
 
     client = createPublicClient({ chain, transport });
@@ -117,7 +117,7 @@ function makeEtherscanLink(address) {
         arbitrum: 'https://arbiscan.io/address/',
         base: 'https://basescan.org/address/',
     };
-    const url = (baseUrls[chainKey] || baseUrls.sepolia) + address;
+    const url = (baseUrls[chainKey] || baseUrls.arbitrum) + address;
     const a = document.createElement('a');
     a.href = url;
     a.textContent = 'Etherscan ↗';
