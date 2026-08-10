@@ -10,6 +10,7 @@ import {
     attestationToRef,
     getCIDFromRawDigest,
 } from 'indelible';
+import { persistChainSelect } from './chain-persist.js';
 
 const chainSelect = document.getElementById('chainSelect');
 const rpcInput = document.getElementById('rpcInput');
@@ -19,6 +20,8 @@ let client;
 function buildClient() {
     client = createIndelibleClient(chainSelect.value, rpcInput.value);
 }
+
+persistChainSelect(chainSelect);
 
 let debounceTimer;
 chainSelect.addEventListener('change', buildClient);

@@ -17,6 +17,7 @@ import {
     getDelegation,
 } from 'indelible';
 import { constrainChainSelectToEns } from './ens-chain.js';
+import { persistChainSelect } from './chain-persist.js';
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
@@ -62,6 +63,7 @@ const chains = {
     sepolia: sepolia
 };
 
+persistChainSelect(chainSelect);
 constrainChainSelectToEns(chainSelect, ['ens']);
 
 function getSelectedChain() {

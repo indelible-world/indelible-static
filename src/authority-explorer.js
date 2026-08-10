@@ -1,6 +1,7 @@
 import { createPublicClient, http, fallback } from 'viem'
 import { ens, CHAINS, DEFAULT_RPC_URLS, PUBLIC_RPC_URLS, prettifyTimestamp } from 'indelible'
 import { constrainChainSelectToEns } from './ens-chain.js'
+import { persistChainSelect } from './chain-persist.js'
 
 const chainSelect = document.getElementById('chainSelect');
 const rpcInput = document.getElementById('rpcInput');
@@ -31,6 +32,7 @@ if (rpcInput) {
     });
 }
 
+persistChainSelect(chainSelect);
 constrainChainSelectToEns(chainSelect, ['authority-explorer']);
 
 buildClient();
