@@ -45,7 +45,16 @@
     <section id="attestations-attest" class="sections">
         <form>
             <label class="inputLabel" for="articleInput">Article Text</label>
-            <div><textarea id="articleInput" class="input textEntry"></textarea></div>
+            <div class="article-row">
+                <textarea id="articleInput" class="input textEntry"></textarea>
+                <div class="pdf-upload">
+                    <label class="inputLabel" for="pdfFileInput">Or upload a PDF</label>
+                    <input type="file" accept="application/pdf,.pdf" id="pdfFileInput">
+                    <button type="button" class="btn-secondary" id="pdfClearButton" hidden>Clear PDF</button>
+                    <p class="pdf-note">The file is processed in your browser and never uploaded.</p>
+                    <span id="pdfStatus" class="commit-timer" hidden></span>
+                </div>
+            </div>
             <label class="inputLabel" for="cidInput" >CID</label>
             <div><input type="text" class="input cid" id="cid" readonly="true"></input></div>
             <label class="inputLabel" for="parentIpfsHashInput">Parent IPFS CID</label>
@@ -61,6 +70,9 @@
             <button type="button" class="inputLabel" id="revealAttestation" hidden>Reveal</button>
             <span id="revealStatus" class="commit-timer" hidden></span>
             <button type="button" class="btn-secondary" id="downloadAttestationRefButton" hidden>Download Attestation Reference</button>
+            <button type="button" class="btn-secondary" id="downloadTaggedPdfButton" hidden>Download Tagged PDF</button>
+            <button type="button" class="btn-secondary" id="downloadSidecarButton" hidden>Download Sidecar JSON</button>
+            <span id="finalizePdfStatus" class="commit-timer" hidden></span>
         
         </form>
     </section>
@@ -92,7 +104,16 @@
     <section id="attestations-prove-quote" class="sections">
         <form>
             <label class="inputLabel" for="proveArticleInput">Article Text</label>
-            <div><textarea id="proveArticleInput" class="input textEntry"></textarea></div>
+            <div class="article-row">
+                <textarea id="proveArticleInput" class="input textEntry"></textarea>
+                <div class="pdf-upload">
+                    <label class="inputLabel" for="provePdfFileInput">Or upload a PDF</label>
+                    <input type="file" accept="application/pdf,.pdf" id="provePdfFileInput">
+                    <button type="button" class="btn-secondary" id="provePdfClearButton" hidden>Clear PDF</button>
+                    <p class="pdf-note">The file is processed in your browser and never uploaded.</p>
+                    <span id="provePdfStatus" class="commit-timer" hidden></span>
+                </div>
+            </div>
             <label class="inputLabel" for="proveQuoteInput">Quote</label>
             <div><textarea id="proveQuoteInput" class="input textEntry"></textarea></div>
             <label class="inputLabel" for="proveAuthorityInput">Authority Address</label>

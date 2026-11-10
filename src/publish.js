@@ -1,4 +1,4 @@
-import { createWalletClient, createPublicClient, custom, http } from 'viem';
+import { createWalletClient, createPublicClient, custom, http, hexToBytes } from 'viem';
 import { mainnet, arbitrum, base, sepolia } from 'viem/chains';
 import {
     createRawCIDv1,
@@ -15,9 +15,11 @@ import {
     registerEnsBinding as libRegisterEnsBinding,
     getExistingAttestationIndex,
     getDelegation,
+    getCIDFromRawDigest,
 } from 'indelible';
 import { constrainChainSelectToEns } from './ens-chain.js';
 import { persistChainSelect } from './chain-persist.js';
+import { attachPdfUpload, loadPdfModule } from './pdf-upload.js';
 
 const articleInput = document.getElementById('articleInput');
 const cidField = document.getElementById('cid');
@@ -42,6 +44,74 @@ downloadAttestationRefButton.addEventListener('click', function () {
     if (!downloadAttestationRefData) return;
     downloadJson(downloadAttestationRefData, 'attestation-reference.json');
 });
+
+// --- PDF upload (Attest) ---
+const downloadTaggedPdfButton = document.getElementById('downloadTaggedPdfButton');
+const downloadSidecarButton = document.getElementById('downloadSidecarButton');
+const finalizePdfStatus = document.getElementById('finalizePdfStatus');
+let taggedPdf = null;
+let sidecarData = null;
+
+const pdfUpload = attachPdfUpload({
+    fileInput: document.getElementById('pdfFileInput'),
+    textarea: articleInput,
+    clearButton: document.getElementById('pdfClearButton'),
+    status: document.getElementById('pdfStatus'),
+});
+
+function baseName(name) {
+    return name.replace(/\.pdf$/i, '');
+}
+
+downloadTaggedPdfButton.addEventListener('click', function () {
+    if (!taggedPdf) return;
+    const url = URL.createObjectURL(new Blob([taggedPdf.bytes], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${baseName(taggedPdf.name)}.indelible.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+downloadSidecarButton.addEventListener('click', function () {
+    if (!sidecarData) return;
+    downloadJson(sidecarData.json, `${baseName(sidecarData.name)}.indelible.json`);
+});
+
+function resetPdfDownloads() {
+    taggedPdf = null;
+    sidecarData = null;
+    downloadTaggedPdfButton.hidden = true;
+    downloadSidecarButton.hidden = true;
+    finalizePdfStatus.hidden = true;
+    finalizePdfStatus.style.color = '';
+}
+
+async function finalizeUploadedPdf({ pdf, publicClient, commitResult, attestationIndex, chainId, attestationRef }) {
+    finalizePdfStatus.hidden = false;
+    finalizePdfStatus.textContent = 'Embedding attestation in PDF…';
+    try {
+        const { finalizePdf } = await loadPdfModule();
+        const result = await finalizePdf({
+            publicClient,
+            pdfBytes: pdf.bytes,
+            commitResult,
+            revealResult: { attestationIndex },
+            chainId,
+        });
+        taggedPdf = { bytes: result.pdfBytes, name: pdf.name };
+        sidecarData = { json: result.sidecar, name: pdf.name };
+        downloadTaggedPdfButton.hidden = false;
+        finalizePdfStatus.hidden = true;
+    } catch (err) {
+        console.error(err);
+        // Embedding fails on e.g. encrypted PDFs; the attestation ref alone is a valid sidecar.
+        sidecarData = { json: attestationRef, name: pdf.name };
+        finalizePdfStatus.textContent = 'Could not create tagged PDF (' + err.message + '). Download the sidecar JSON and keep it next to the original PDF.';
+        finalizePdfStatus.style.color = 'orange';
+    }
+    downloadSidecarButton.hidden = false;
+}
 
 const wallets = [];
 let selectedWallet = null;
@@ -167,6 +237,7 @@ commitAttestationButton.addEventListener('click', async function(event) {
     event.preventDefault()
     downloadAttestationRefButton.hidden = true;
     downloadAttestationRefData = null;
+    resetPdfDownloads();
     revealStatus.hidden = true;
     revealStatus.classList.remove('success');
 
@@ -220,6 +291,12 @@ commitAttestationButton.addEventListener('click', async function(event) {
         pendingCommit = result.pendingCommit;
         localStorage.setItem('pendingCommit', JSON.stringify(pendingCommit));
         localStorage.setItem('revealAt', (Date.now() + 60000).toString());
+        // PDF bytes stay in memory only; after a reload the user must re-upload.
+        if (pdfUpload.current) {
+            localStorage.setItem('pendingCommitPdf', pdfUpload.current.name);
+        } else {
+            localStorage.removeItem('pendingCommitPdf');
+        }
 
         startCommitTimer(60, true);
     } catch (err) {
@@ -236,12 +313,24 @@ commitAttestationButton.addEventListener('click', async function(event) {
 
 revealButton.addEventListener('click', async function(event) {
     event.preventDefault()
+
+    const pendingPdfName = localStorage.getItem('pendingCommitPdf');
+    if (pendingPdfName && !pdfUpload.current) {
+        const proceed = confirm(
+            `This commit was for "${pendingPdfName}". Re-upload that PDF before revealing to get a tagged PDF and sidecar. Reveal without it?`
+        );
+        if (!proceed) return;
+    }
+
     await ensureWallet();
 
     // Capture data before clearing pendingCommit
     const capturedCid = cidField.value;
     const capturedAuthority = pendingCommit[5];
     const capturedChain = getSelectedChain();
+    const capturedPdf = pdfUpload.current;
+    const committedCid = getCIDFromRawDigest(hexToBytes(pendingCommit[2]));
+    resetPdfDownloads();
 
     revealStatus.hidden = false;
     revealStatus.classList.remove('success');
@@ -259,6 +348,7 @@ revealButton.addEventListener('click', async function(event) {
         });
 
         localStorage.removeItem('pendingCommit');
+        localStorage.removeItem('pendingCommitPdf');
         pendingCommit = null;
         revealButton.hidden = true;
         revealButton.disabled = false;
@@ -272,6 +362,17 @@ revealButton.addEventListener('click', async function(event) {
             attestationIndex: Number(attestationIndex),
         };
         downloadAttestationRefButton.hidden = false;
+
+        if (capturedPdf) {
+            await finalizeUploadedPdf({
+                pdf: capturedPdf,
+                publicClient,
+                commitResult: { ipfsCid: committedCid, authority: capturedAuthority },
+                attestationIndex,
+                chainId: capturedChain.id,
+                attestationRef: downloadAttestationRefData,
+            });
+        }
     } catch (err) {
         revealStatus.hidden = true;
         revealButton.disabled = false;
@@ -466,6 +567,13 @@ const proveArticleInput = document.getElementById('proveArticleInput');
 const proveQuoteInput = document.getElementById('proveQuoteInput');
 const proveAuthorityInput = document.getElementById('proveAuthorityInput');
 const proveQuoteStatus = document.getElementById('proveQuoteStatus');
+
+attachPdfUpload({
+    fileInput: document.getElementById('provePdfFileInput'),
+    textarea: proveArticleInput,
+    clearButton: document.getElementById('provePdfClearButton'),
+    status: document.getElementById('provePdfStatus'),
+});
 
 proveQuoteButton.addEventListener('click', async function(event) {
     event.preventDefault();

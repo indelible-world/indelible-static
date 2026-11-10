@@ -35,7 +35,18 @@
     <section id="verify-article" class="sections">
         <form>
             <label class="inputLabel" for="articleInput">Article Text</label>
-            <div><textarea id="articleInput" class="input textEntry"></textarea></div>
+            <div class="article-row">
+                <textarea id="articleInput" class="input textEntry"></textarea>
+                <div class="pdf-upload">
+                    <label class="inputLabel" for="pdfFileInput">Or upload a PDF</label>
+                    <input type="file" accept="application/pdf,.pdf" id="pdfFileInput">
+                    <label class="inputLabel" for="sidecarFileInput">Sidecar (optional)</label>
+                    <input type="file" accept=".json,application/json" id="sidecarFileInput">
+                    <button type="button" class="btn-secondary" id="pdfClearButton" hidden>Clear PDF</button>
+                    <p class="pdf-note">The file is processed in your browser and never uploaded.</p>
+                    <span id="pdfStatus" class="commit-timer" hidden></span>
+                </div>
+            </div>
             <label class="inputLabel" for="cidInput" >CID</label>
             <div><input type="text" class="input cid" id="cid"></input></div>
             <label class="inputLabel" for="authorityInput">Authority Address</label>

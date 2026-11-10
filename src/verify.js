@@ -11,6 +11,7 @@ import {
     getCIDFromRawDigest,
 } from 'indelible';
 import { persistChainSelect } from './chain-persist.js';
+import { attachPdfUpload, loadPdfModule } from './pdf-upload.js';
 
 const chainSelect = document.getElementById('chainSelect');
 const rpcInput = document.getElementById('rpcInput');
@@ -188,6 +189,58 @@ if (urlParams.has('authority')) {
     authorityField.value = urlParams.get('authority');
 }
 
+// --- PDF upload ---
+const sidecarFileInput = document.getElementById('sidecarFileInput');
+let sidecarJson = null;
+
+function applyRef(ref) {
+    if (!ref) return;
+    if (ref.chainId) {
+        const chainKey = getChainKeyById(ref.chainId);
+        if (chainKey && chainKey !== chainSelect.value) {
+            chainSelect.value = chainKey;
+            chainSelect.dispatchEvent(new Event('change'));
+        }
+    }
+    if (ref.authority && !authorityField.value) {
+        authorityField.value = ref.authority;
+    }
+}
+
+const pdfUpload = attachPdfUpload({
+    fileInput: document.getElementById('pdfFileInput'),
+    textarea: articleInput,
+    clearButton: document.getElementById('pdfClearButton'),
+    status: document.getElementById('pdfStatus'),
+    async onLoad({ bytes }, pdf) {
+        if (sidecarJson) return;
+        const meta = await pdf.readIndelibleMetadata(bytes);
+        if (meta?.attestation) {
+            applyRef(meta.attestation);
+            pdfUpload.setStatus('Loaded PDF with an embedded Indelible reference. The text shown is exactly what is hashed.');
+        }
+    },
+    onClear() {
+        sidecarJson = null;
+        sidecarFileInput.value = '';
+    },
+});
+
+sidecarFileInput.addEventListener('change', async () => {
+    const file = sidecarFileInput.files[0];
+    sidecarJson = null;
+    if (!file) return;
+    try {
+        const { parseSidecar } = await loadPdfModule();
+        const json = JSON.parse(await file.text());
+        applyRef(parseSidecar(json).attestation);
+        sidecarJson = json;
+    } catch (err) {
+        sidecarFileInput.value = '';
+        alert('Invalid sidecar file: ' + err.message);
+    }
+});
+
 const verifyStatus = document.getElementById('verifyStatus');
 const verifyResult = document.getElementById('verifyResult');
 const verifyHeading = document.getElementById('verifyHeading');
@@ -221,7 +274,13 @@ verifyButton.addEventListener('click', async function(event) {
     verifyButton.disabled = true;
 
     try {
-        const verification = await verifyCid(client, cid, authority || null);
+        const pdfFile = pdfUpload.current;
+        const verification = pdfFile
+            ? await (await loadPdfModule()).verifyPdf(client, pdfFile.bytes, {
+                authority: authority || undefined,
+                sidecar: sidecarJson ?? undefined,
+            })
+            : await verifyCid(client, cid, authority || null);
         verifyResult.className = verification.cssClass ?? '';
 
         verifyHeading.textContent = verification.headline;
