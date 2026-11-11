@@ -429,12 +429,14 @@ input[type="file"] {
 .article-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: stretch;
   gap: var(--space-3);
 }
 
+/* Stretch to the upload column's height so the row leaves no empty space above the CID label. */
 .article-row .textEntry {
   flex: 1 1 420px;
+  box-sizing: border-box;
 }
 
 .pdf-upload {
