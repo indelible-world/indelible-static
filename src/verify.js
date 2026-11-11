@@ -242,12 +242,42 @@ const verifyHeading = document.getElementById('verifyHeading');
 const verifyDetails = document.getElementById('verifyDetails');
 const downloadVerifyRefButton = document.getElementById('downloadVerifyRefButton');
 const downloadQuoteRefButton = document.getElementById('downloadQuoteRefButton');
+const downloadVerifyTaggedPdfButton = document.getElementById('downloadVerifyTaggedPdfButton');
 let downloadVerifyRefData = null;
+let downloadVerifyPdfName = null;
+let taggedPdfSource = null;
 let downloadQuoteRefData = null;
+
+function baseName(name) {
+    return name.replace(/\.pdf$/i, '');
+}
 
 downloadVerifyRefButton.addEventListener('click', function () {
     if (!downloadVerifyRefData) return;
-    downloadJson(downloadVerifyRefData, 'attestation-reference.json');
+    downloadJson(
+        downloadVerifyRefData,
+        downloadVerifyPdfName ? `${baseName(downloadVerifyPdfName)}.indelible.json` : 'attestation-reference.json',
+    );
+});
+
+downloadVerifyTaggedPdfButton.addEventListener('click', async function () {
+    if (!taggedPdfSource) return;
+    downloadVerifyTaggedPdfButton.disabled = true;
+    try {
+        const { embedIndelibleMetadata } = await loadPdfModule();
+        const bytes = await embedIndelibleMetadata(taggedPdfSource.bytes, { attestationRef: taggedPdfSource.ref });
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName(taggedPdfSource.name)}.indelible.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error(err);
+        alert('Could not create tagged PDF: ' + err.message);
+    } finally {
+        downloadVerifyTaggedPdfButton.disabled = false;
+    }
 });
 
 downloadQuoteRefButton.addEventListener('click', function () {
@@ -267,6 +297,10 @@ verifyButton.addEventListener('click', async function(event) {
     verifyStatus.hidden = false;
     verifyStatus.textContent = 'Verifying…';
     verifyButton.disabled = true;
+    downloadVerifyPdfName = null;
+    taggedPdfSource = null;
+    downloadVerifyTaggedPdfButton.hidden = true;
+    downloadVerifyRefButton.textContent = 'Download Attestation Reference';
 
     try {
         const pdfFile = pdfUpload.current;
@@ -328,6 +362,16 @@ verifyButton.addEventListener('click', async function(event) {
         if (refAtt && refAtt.index != null) {
             downloadVerifyRefData = attestationToRef(refAtt, (CHAINS[chainSelect.value] ?? CHAINS.arbitrum).id);
             downloadVerifyRefButton.hidden = false;
+            if (pdfFile) {
+                downloadVerifyPdfName = pdfFile.name;
+                downloadVerifyRefButton.textContent = 'Download Sidecar JSON';
+                // Embedding again would duplicate attachments in an already-tagged PDF.
+                const existing = await (await loadPdfModule()).readIndelibleMetadata(pdfFile.bytes);
+                if (!existing?.attestation) {
+                    taggedPdfSource = { bytes: pdfFile.bytes, name: pdfFile.name, ref: downloadVerifyRefData };
+                    downloadVerifyTaggedPdfButton.hidden = false;
+                }
+            }
         } else {
             downloadVerifyRefButton.hidden = true;
         }
@@ -341,6 +385,7 @@ verifyButton.addEventListener('click', async function(event) {
         li.textContent = err.message;
         verifyDetails.appendChild(li);
         downloadVerifyRefButton.hidden = true;
+        downloadVerifyTaggedPdfButton.hidden = true;
         verifyResult.hidden = false;
         console.error(err);
     } finally {

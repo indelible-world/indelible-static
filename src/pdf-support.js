@@ -5,4 +5,4 @@ import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export { extractPdfText, readIndelibleMetadata, parseSidecar, verifyPdf, finalizePdf } from 'indelible/pdf';
+export { extractPdfText, readIndelibleMetadata, parseSidecar, verifyPdf, finalizePdf, embedIndelibleMetadata } from 'indelible/pdf';
