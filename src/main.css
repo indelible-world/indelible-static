@@ -425,6 +425,36 @@ input[type="file"] {
   cursor: pointer;
 }
 
+/* Article textarea with PDF upload column */
+.article-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.article-row .textEntry {
+  flex: 1 1 420px;
+}
+
+.pdf-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 0 1 260px;
+  min-width: 0;
+}
+
+.pdf-upload .inputLabel {
+  margin-top: 0;
+}
+
+.pdf-note {
+  color: var(--ink-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
 /* ==========================================================================
    Buttons
    ========================================================================== */
