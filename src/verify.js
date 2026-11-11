@@ -6,11 +6,11 @@ import {
     verifyQuoteProof,
     CHAINS,
     createIndelibleClient,
-    getChainKeyById,
     attestationToRef,
     getCIDFromRawDigest,
 } from 'indelible';
 import { persistChainSelect } from './chain-persist.js';
+import { setChainById } from './chain-indicator.js';
 import { attachPdfUpload, loadPdfModule } from './pdf-upload.js';
 
 const chainSelect = document.getElementById('chainSelect');
@@ -23,6 +23,9 @@ function buildClient() {
 }
 
 persistChainSelect(chainSelect);
+
+const urlChainId = new URLSearchParams(window.location.search).get('chainId');
+if (urlChainId) setChainById(chainSelect, urlChainId);
 
 let debounceTimer;
 chainSelect.addEventListener('change', buildClient);
@@ -68,11 +71,7 @@ verifyQuoteForm.addEventListener('submit', async function (event) {
 
         // Auto-switch chain if chainId is embedded in the proof file
         if (proofData.chainId) {
-            const chainKey = getChainKeyById(proofData.chainId);
-            if (chainKey) {
-                chainSelect.value = chainKey;
-                buildClient();
-            }
+            setChainById(chainSelect, proofData.chainId);
         }
 
         const { verification, quoteText, allProofsValid } = await verifyQuoteProof(client, proofData);
@@ -196,11 +195,7 @@ let sidecarJson = null;
 function applyRef(ref) {
     if (!ref) return;
     if (ref.chainId) {
-        const chainKey = getChainKeyById(ref.chainId);
-        if (chainKey && chainKey !== chainSelect.value) {
-            chainSelect.value = chainKey;
-            chainSelect.dispatchEvent(new Event('change'));
-        }
+        setChainById(chainSelect, ref.chainId);
     }
     if (ref.authority && !authorityField.value) {
         authorityField.value = ref.authority;

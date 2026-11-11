@@ -1,6 +1,8 @@
 // Persists the user's last-selected chain across the verify (index.html) and
 // publish (publish.html) pages via localStorage.
 
+import { watchTestnet } from './chain-indicator.js';
+
 const STORAGE_KEY = 'indelible:lastChain';
 
 /**
@@ -18,4 +20,6 @@ export function persistChainSelect(chainSelect) {
     chainSelect.addEventListener('change', () => {
         localStorage.setItem(STORAGE_KEY, chainSelect.value);
     });
+
+    watchTestnet(chainSelect);
 }

@@ -60,12 +60,44 @@ const settingsToggle = document.getElementById('settingsToggle');
 const settingsDropdown = document.getElementById('settingsDropdown');
 
 
+const rpcInput = document.getElementById('rpcInput');
+
+// Empty means "use the default RPC".
+function isValidRpc() {
+    if (!rpcInput) return true;
+    const value = rpcInput.value.trim();
+    if (!value) return true;
+    try {
+        return ['http:', 'https:', 'ws:', 'wss:'].includes(new URL(value).protocol);
+    } catch {
+        return false;
+    }
+}
+
+function updateRpcValidity() {
+    rpcInput?.classList.toggle('invalid', !isValidRpc());
+}
+
+rpcInput?.addEventListener('input', updateRpcValidity);
+
+function closeSettings() {
+    if (!isValidRpc()) {
+        updateRpcValidity();
+        return;
+    }
+    settingsDropdown.classList.remove('open');
+}
+
 settingsToggle.addEventListener('click', () => {
-    settingsDropdown.classList.toggle('open');
+    if (settingsDropdown.classList.contains('open')) {
+        closeSettings();
+    } else {
+        settingsDropdown.classList.add('open');
+    }
 });
 
 document.addEventListener('click', (e) => {
     if (!settingsDropdown.contains(e.target) && e.target !== settingsToggle) {
-        settingsDropdown.classList.remove('open');
+        closeSettings();
     }
 });
