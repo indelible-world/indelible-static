@@ -74,3 +74,21 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           preCommands: wrangler pages project create indelible-static --production-branch=main || true
           command: pages deploy dist --project-name=indelible-static --branch=main --commit-dirty=true
+
+      - name: Update IPFS DNSLink Record on Cloudflare
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          URL="https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records"
+
+          ID=$(curl -fsS \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            "$URL?type=TXT&name=_dnslink.app.indelible.world" \
+            | jq -r '.result[0].id')
+
+          curl -fsS -X PATCH \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"content":"dnslink=/ipfs/${{ steps.ipfs.outputs.cid }}"}' \
+            "$URL/$ID"
