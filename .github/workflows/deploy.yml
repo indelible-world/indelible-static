@@ -85,10 +85,10 @@ jobs:
           ID=$(curl -fsS \
             -H "Authorization: Bearer $CF_API_TOKEN" \
             "$URL?type=TXT&name=_dnslink.app.indelible.world" \
-            | jq -r '.result[0].id')
+            | jq -er '.result[0].id')
 
           curl -fsS -X PATCH \
             -H "Authorization: Bearer $CF_API_TOKEN" \
             -H "Content-Type: application/json" \
-            --data '{"content":"dnslink=/ipfs/${{ steps.ipfs.outputs.cid }}"}' \
+            --data '{"content":'"dnslink=/ipfs/${{ steps.ipfs.outputs.cid }}"''}' \
             "$URL/$ID"
