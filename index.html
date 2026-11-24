@@ -120,7 +120,7 @@
             .then(({ cid, url }) => {
                 const link = document.getElementById('ipfs-link');
                 link.textContent = url;
-                link.href = `https://ipfs.io/ipfs/${cid}`;
+                link.href = `https://${cid}.ipfs.inbrowser.link`;
                 document.getElementById('ipfs-footer').removeAttribute('hidden');
             })
             .catch(() => {});
