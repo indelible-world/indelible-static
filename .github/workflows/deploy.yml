@@ -68,11 +68,11 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `cid=${cid}\n`);
           EOF
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          preCommands: wrangler pages project create indelible-static --production-branch=main || true
+          #preCommands: wrangler pages project create indelible-static --production-branch=main || true
           command: pages deploy dist --project-name=indelible-static --branch=main --commit-dirty=true
 
       - name: Update IPFS DNSLink Record on Cloudflare
