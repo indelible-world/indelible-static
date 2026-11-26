@@ -70,9 +70,12 @@
             </div>
             <button type="button" class="inputLabel" id="revealAttestation" hidden>Reveal</button>
             <span id="revealStatus" class="commit-timer" hidden></span>
-            <button type="button" class="btn-secondary" id="downloadAttestationRefButton" hidden>Download Attestation Reference</button>
-            <button type="button" class="btn-secondary" id="downloadTaggedPdfButton" hidden>Download Tagged PDF</button>
-            <button type="button" class="btn-secondary" id="downloadSidecarButton" hidden>Download Sidecar JSON</button>
+            <div class="download-actions">
+                <button type="button" class="btn-secondary" id="downloadAttestationRefButton" hidden>Download Attestation Reference</button>
+                <button type="button" class="btn-secondary" id="downloadTextButton" hidden>Download Text (.txt)</button>
+                <button type="button" class="btn-secondary" id="downloadTaggedPdfButton" hidden>Download Tagged PDF</button>
+                <button type="button" class="btn-secondary" id="downloadSidecarButton" hidden>Download Sidecar JSON</button>
+            </div>
             <span id="finalizePdfStatus" class="commit-timer" hidden></span>
         
         </form>

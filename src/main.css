@@ -567,6 +567,16 @@ button:disabled {
   flex-basis: 100%;
 }
 
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.download-actions .btn-secondary {
+  margin-top: 0;
+}
+
 .commit-timer {
   color: var(--ink-muted);
   font-size: 13px;

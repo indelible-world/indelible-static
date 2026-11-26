@@ -45,6 +45,24 @@ downloadAttestationRefButton.addEventListener('click', function () {
     downloadJson(downloadAttestationRefData, 'attestation-reference.json');
 });
 
+const downloadTextButton = document.getElementById('downloadTextButton');
+let attestedText = null;
+
+downloadTextButton.addEventListener('click', function () {
+    if (!attestedText) return;
+    const url = URL.createObjectURL(new Blob([attestedText.text], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = attestedText.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+function resetTextDownload() {
+    attestedText = null;
+    downloadTextButton.hidden = true;
+}
+
 // --- PDF upload (Attest) ---
 const downloadTaggedPdfButton = document.getElementById('downloadTaggedPdfButton');
 const downloadSidecarButton = document.getElementById('downloadSidecarButton');
@@ -237,6 +255,7 @@ commitAttestationButton.addEventListener('click', async function(event) {
     event.preventDefault()
     downloadAttestationRefButton.hidden = true;
     downloadAttestationRefData = null;
+    resetTextDownload();
     resetPdfDownloads();
     revealStatus.hidden = true;
     revealStatus.classList.remove('success');
@@ -329,7 +348,9 @@ revealButton.addEventListener('click', async function(event) {
     const capturedAuthority = pendingCommit[5];
     const capturedChain = getSelectedChain();
     const capturedPdf = pdfUpload.current;
+    const capturedText = articleInput.value;
     const committedCid = getCIDFromRawDigest(hexToBytes(pendingCommit[2]));
+    resetTextDownload();
     resetPdfDownloads();
 
     revealStatus.hidden = false;
@@ -362,6 +383,15 @@ revealButton.addEventListener('click', async function(event) {
             attestationIndex: Number(attestationIndex),
         };
         downloadAttestationRefButton.hidden = false;
+
+        // Offer the text only if it still matches the committed CID.
+        if (capturedText && (await createRawCIDv1(capturedText)) === committedCid) {
+            attestedText = {
+                text: capturedText,
+                filename: (capturedPdf ? baseName(capturedPdf.name) : 'attested-text') + '.txt',
+            };
+            downloadTextButton.hidden = false;
+        }
 
         if (capturedPdf) {
             await finalizeUploadedPdf({
